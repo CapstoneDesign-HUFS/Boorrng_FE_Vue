@@ -1,37 +1,37 @@
 <template>
   <div class="bottom-navigation">
     <div class="nav-item"
-         :class="{ active: $store.state.nav_menu === 0 }"
+         :class="{ active: $store.state.navMenu === 0 }"
          @click="setActiveTab('MyReport')">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
-          <path d="M18 20V10" :stroke="$store.state.nav_menu === 0 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M12 20V4" :stroke="$store.state.nav_menu === 0 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M6 20V14" :stroke="$store.state.nav_menu === 0 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 20V10" :stroke="$store.state.navMenu === 0 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 20V4" :stroke="$store.state.navMenu === 0 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6 20V14" :stroke="$store.state.navMenu === 0 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="nav-label">리포트</div>
     </div>
        
     <div class="nav-item"
-         :class="{ active: $store.state.nav_menu === 1 }"
+         :class="{ active: $store.state.navMenu === 1 }"
          @click="setActiveTab('Home')">
       <div class="nav-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" :stroke="$store.state.nav_menu === 1 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-          <polyline points="9 22 9 12 15 12 15 22" :stroke="$store.state.nav_menu === 1 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" :stroke="$store.state.navMenu === 1 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <polyline points="9 22 9 12 15 12 15 22" :stroke="$store.state.navMenu === 1 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
         </svg>
       </div>
       <div class="nav-label">홈</div>
     </div>
        
     <div class="nav-item"
-         :class="{ active: $store.state.nav_menu === 2  }"
+         :class="{ active: $store.state.navMenu === 2  }"
          @click="setActiveTab('MyPage')">
       <div class="nav-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" :stroke="$store.state.nav_menu === 2 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-          <circle cx="12" cy="7" r="4" :stroke="$store.state.nav_menu === 2 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle>
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" :stroke="$store.state.navMenu === 2 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="12" cy="7" r="4" :stroke="$store.state.navMenu === 2 ? '#38c16f' : '#888888'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle>
         </svg>
       </div>
       <div class="nav-label">MY</div>
