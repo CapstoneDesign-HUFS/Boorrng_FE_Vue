@@ -1,15 +1,23 @@
 <template>
+
+  <!-- <SearchResultPage v-if="isSearched" :searchResults="searchResults" @back="isSearched = false" /> -->
+
+  
+  <router-view class="fullscreen-child"></router-view>
   <div class="tmap-page">
     <div id="map_div" class="map-container"></div>
   </div>
   <SearchBox @search="handleSearch" />
   <LocationButton @locate="handleLocationClick" />
+
+  
   
 </template>
 
 <script>
 import SearchBox from '../components/SearchBox.vue';
 import LocationButton from '../components/LocationButton.vue';
+import SearchResultPage from './SearchResultPage.vue';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
@@ -18,6 +26,7 @@ export default {
   components: {
     SearchBox,
     LocationButton,
+    SearchResultPage,
   },
   data() {
     return {
@@ -26,6 +35,8 @@ export default {
       tmapKey: import.meta.env.VITE_APP_TMAP, // .env 파일에서 TMap API 키 가져오기
       tmapApi: null,
       currentLocation: {lat: 37.566481622437934, lon: 126.98502302169841},
+
+      isSearched: false, // 검색 여부
     };
   },
   created(){
@@ -92,6 +103,9 @@ export default {
     // 검색 처리 메소드 추가
     async handleSearch(query) {
       console.log('검색어:', query);
+      this.isSearched = true; // 검색 결과 페이지 표시
+      console.log('검색 완료? ', this.isSearched);
+
       // 여기에 T Map API를 사용한 검색 및 결과 처리 로직 구현
       // 예: POI 검색, 경로 검색 등
       try {
@@ -102,12 +116,24 @@ export default {
             version: 1,
             centerLat: this.currentLocation.lat,
             centerLon: this.currentLocation.lon,
-            radius: 2, 
+            radius: 1, // 검색 반경 (km 단위)
           }
         });
         
+        this.$store.commit('setHomePageState', 1); // BottomNav 설정
+
         // response.data에 실제 응답 데이터 존재
-        console.log("검색결과:", response.data["searchPoiInfo"]);
+        console.log("검색결과:", response.data["searchPoiInfo"]['pois']['poi']);
+
+        // 검색 결과를 Vuex 스토어에 저장
+        this.$store.commit('setSearchQuery', query);
+        this.$store.commit('setSearchCount', response.data["searchPoiInfo"]['totalCount']);
+        this.$store.commit('setSearchResults', response.data["searchPoiInfo"]['pois']['poi']);
+
+        // 검색 결과 페이지로 이동
+        this.$router.push({ name: 'SearchResultPage' });
+
+        
         
         // 필요한 데이터 처리
         /* if (response.data.searchPoiInfo && response.data.searchPoiInfo.pois) {
@@ -125,6 +151,7 @@ export default {
           console.log("검색 결과가 없습니다.");
         } */
       } catch (error) {
+        //alert("API 요청 오류");
         console.log("API 요청 오류", error);
         this.searchResults = [];
       }
@@ -206,5 +233,16 @@ export default {
 .map-container {
   width: 100%;
   height: 100%;
+}
+.fullscreen-child {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1000; /* 맵보다 위에 표시 */
+  background: linear-gradient(to bottom, #f5ffed, #e8f9db);
 }
 </style>

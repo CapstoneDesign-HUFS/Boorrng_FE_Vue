@@ -7,6 +7,7 @@ import Tmap from "./pages/Tmap.vue";
 import MyReport from "./pages/MyReport.vue";
 import MyPage from "./pages/MyPage.vue";
 import EditSpeed from "./pages/EditSpeed.vue";
+import SearchResultPage from "./pages/SearchResultPage.vue";
 
 const routes = [
     {
@@ -37,6 +38,9 @@ const routes = [
         path: "/home",
         component : Tmap,
         name: "Home",
+        children: [
+            {path: 'search', component: SearchResultPage, name: 'SearchResultPage', meta: { hideBottomNav: true }},
+        ]
     },
     {
         path: "/my-report",
@@ -53,7 +57,8 @@ const routes = [
         component: EditSpeed,
         name: "EditSpeed",
         meta: { hideBottomNav: true },
-    }
+    },
+    
 ];
 
 const router = createRouter({

@@ -7,7 +7,7 @@
             <span class="result-address">{{ `${result.upperAddrName} ${result.middleAddrName} ${result.roadName} ${result.firstBuildNo}`}}</span>
           </div>
         </div>
-        <div class="arrow-button" role="button" tabindex="0" aria-label="경로탐색">
+        <div @click="getRoute" class="arrow-button" role="button" tabindex="0" aria-label="경로탐색">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -20,6 +20,19 @@ export default{
   props: {
     result: Object, // 검색결과 1개 - response.data["searchPoiInfo"]["pois"]의 원소 하나
   },
+  methods: {
+    getRoute() {
+      this.$store.commit('setSelectedDestination', {
+        name: this.result.name,
+        lat: this.result.noorLat,
+        lon: this.result.noorLon,
+        distance: this.result.radius * 1000,
+      });
+
+      // 경로 탐색 구현해야 함
+      console.log("getRoute() 호출됨", this.$store.state.selectedDestination);
+    }
+  }
 }
 </script>
 
@@ -59,6 +72,7 @@ export default{
       font-weight: 600;
       color: #333;
       margin-bottom: 5px;
+      text-align: left;
     }
     
     .result-details {
