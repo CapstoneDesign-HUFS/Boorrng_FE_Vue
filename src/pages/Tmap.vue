@@ -11,7 +11,6 @@
   <LocationButton @locate="handleLocationClick" />
 
   
-  
 </template>
 
 <script>
@@ -37,6 +36,11 @@ export default {
       currentLocation: {lat: 37.566481622437934, lon: 126.98502302169841},
 
       isSearched: false, // 검색 여부
+
+      
+      startMarker: null,
+      endMarker: null,
+      routeLayer: null,  // 경로 레이어
     };
   },
   created(){
@@ -156,6 +160,7 @@ export default {
         this.searchResults = [];
       }
     },
+  
     // 현재 위치로 이동 처리 메소드 추가
     handleLocationClick() {
       console.log('현재 위치로 이동 버튼 클릭됨');
@@ -191,26 +196,8 @@ export default {
       // 새 GPS 마커 생성
       this.gpsMarker = new Tmapv3.Marker({
         position: new Tmapv3.LatLng(lat, lon),
-        icon: "https://tmapapi.sktelecom.com/upload/tmap/marker/pin_b_m_a.png", // 빨간색 마커
-        //iconSize: new Tmapv3.Size(50, 50), // 작게 설정
-        map: this.map
-      });
-      
-      // GPS 정확도를 보여주는 원 추가 (선택사항)
-      if (this.accuracyCircle) {
-        this.accuracyCircle.setMap(null);
-      }
-      
-      // 정확도 범위를 나타내는 원 (반경: 미터 단위)
-      const accuracy = 50; // 예시로 50m 반경 설정
-      this.accuracyCircle = new Tmapv3.Circle({
-        center: new Tmapv3.LatLng(lat, lon),
-        radius: accuracy,
-        strokeColor: "#4B89F3",
-        strokeOpacity: 0.6,
-        strokeWeight: 2,
-        fillColor: "#4B89F3",
-        fillOpacity: 0.2,
+        icon: new URL('../assets/images/current-marker.png', import.meta.url).href, 
+        iconSize: new Tmapv3.Size(50, 50), // 작게 설정
         map: this.map
       });
     }
