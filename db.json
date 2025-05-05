@@ -1,0 +1,23 @@
+{
+    "traffic-light": {
+        "intersectionName": "청계2가",
+        "timestamp": "2025-05-04T07:58:55.431000+00:00",
+        "signals": [
+        {
+            "direction": "북쪽",
+            "signalColor": "green",
+            "remainingSeconds": 21.3
+        },
+        {
+            "direction": "동쪽",
+            "signalColor": "red",
+            "remainingSeconds": 121.3
+        },
+        {
+            "direction": "남쪽",
+            "signalColor": "red",
+            "remainingSeconds": 21.3
+        }
+        ]
+    }
+  }
