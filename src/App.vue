@@ -1,7 +1,7 @@
 <template>
 
      <router-view></router-view>
-     <BottomNav v-if="!$route.meta.hideBottomNav" />
+     <BottomNav v-if="!$route.meta.hideBottomNav && $store.state.homePageState" />
 </template>
 
 <script>

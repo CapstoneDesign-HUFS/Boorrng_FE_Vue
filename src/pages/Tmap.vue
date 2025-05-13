@@ -7,17 +7,18 @@
   <div class="tmap-page">
     <div id="map_div" class="map-container"></div>
   </div>
-  <SearchBox @search="handleSearch" />
-  <LocationButton @locate="handleLocationClick" />
-  <!--   <div class="route-test-button" @click="testRouteSearch">
+  <SearchBox v-if="showSearchBox===true" @search="handleSearch" />
+  <LocationButton v-if="showLocationButton===true" @locate="handleLocationClick" />
+    <div class="route-test-button" @click="showRoute">
     <span>경로 테스트</span>
-  </div> -->
-  <div class="route-test-button" @click="showSignal">
+  </div>
+  <div class="light-test-button" @click="showSignal">
     <span>신호등 정보</span>
   </div>
   <SignalModal v-if="this.showSignalModal===true" @closeModal="closeSignalModal" />
-
   
+  <RouteInfoModal v-if="showRouteInfoModal" @startGuidance="startGuidance"/>
+  <RouteHeader v-if="showRouteHeader" @close="endGuidance"/>
 </template>
 
 <script>
@@ -25,6 +26,8 @@ import SearchBox from '../components/SearchBox.vue';
 import LocationButton from '../components/LocationButton.vue';
 import SearchResultPage from './SearchResultPage.vue';
 import SignalModal from '../components/SignalModal.vue';
+import RouteInfoModal from '@/components/RouteInfoModal.vue';
+import RouteHeader from '@/components/RouteHeader.vue';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
@@ -35,6 +38,8 @@ export default {
     LocationButton,
     SearchResultPage,
     SignalModal,
+    RouteInfoModal,
+    RouteHeader,
   },
   data() {
     return {
@@ -47,9 +52,9 @@ export default {
       isSearched: false, // 검색 여부
 
       
-      startMarker: null,
-      endMarker: null,
-      routeLayer: null,  // 경로 레이어
+      // 경로 관련
+      route: null,
+      routeLines: [],
 
 
       // 신호등 관련
@@ -63,6 +68,11 @@ export default {
       },
 
       showSignalModal: false,
+
+      showRouteHeader: false,
+      showRouteInfoModal: false,
+      showSearchBox: true,
+      showLocationButton: true,
 
     };
   },
@@ -147,7 +157,7 @@ export default {
           }
         });
         
-        this.$store.commit('setHomePageState', 1); // BottomNav 설정
+        this.$store.commit('setHomePageState', false); // BottomNav 설정
 
         // response.data에 실제 응답 데이터 존재
         console.log("검색결과:", response.data["searchPoiInfo"]['pois']['poi']);
@@ -184,7 +194,7 @@ export default {
       }
     },
   
-    // 현재 위치로 이동 처리 메소드 추가
+    // 1. 현재 위치로 이동 처리 메소드 추가
     handleLocationClick() {
       console.log('현재 위치로 이동 버튼 클릭됨');
       if (navigator.geolocation) {
@@ -220,12 +230,12 @@ export default {
       this.gpsMarker = new Tmapv3.Marker({
         position: new Tmapv3.LatLng(lat, lon),
         icon: new URL('../assets/images/current-marker.png', import.meta.url).href, 
-        iconSize: new Tmapv3.Size(50, 50), // 작게 설정
+        iconSize: new Tmapv3.Size(70, 70), // 작게 설정
         map: this.map
       });
     },
 
-    // 신호등 상태 요청(json-server)
+    // 2. 신호등 상태 요청(json-server)
     async getSignalState() {
       console.log("신호등 정보 요청");
       try{
@@ -252,6 +262,8 @@ export default {
 
       this.signalMarker = new Tmapv3.Marker({
         position: new Tmapv3.LatLng(this.signalLocation.lat, this.signalLocation.lon),
+        icon: new URL('../assets/images/traffic-light.png', import.meta.url).href,
+        iconSize: new Tmapv3.Size(60, 60), // 작게 설정
         map: this.map
       });
       this.signalMarker.on('click', this.handleSignalMarkerClick)
@@ -265,158 +277,171 @@ export default {
       this.showSignalModal = false;
     },
 
-    /*     // API 호출을 통한 경로 검색
-    async searchRouteWithAxios(startPoint, endPoint) {
+
+    // 3. 경로 요청 및 표시
+    async showRoute() {
+      console.log("경로 테스트 버튼 클릭됨");
+
+      this.showRouteHeader = true;
+      this.showRouteInfoModal = true;
+      this.showSearchBox = false;
+      this.showLocationButton = false;
+      this.$store.commit('setHomePageState', false); // BottomNav 숨김
+
       try {
-        // 기존 경로 및 마커 삭제
-        this.clearRoute();
+        // 기존 경로 객체가 있다면 삭제
+        if (this.routeLines && this.routeLines.length > 0) {
+          this.routeLines.forEach(line => line.setMap(null));
+        }
+        if (this.markerPoints && this.markerPoints.length > 0) {
+          this.markerPoints.forEach(marker => marker.setMap(null));
+        }
         
-        // 출발지, 도착지 좌표 설정
-        const startLatLng = new Tmapv3.LatLng(startPoint.lat, startPoint.lon);
-        const endLatLng = new Tmapv3.LatLng(endPoint.lat, endPoint.lon);
+        this.routeLines = [];
+        this.markerPoints = [];
         
-        // 출발지 마커 생성
-        this.startMarker = new Tmapv3.Marker({
-          position: startLatLng,
-          icon: "https://tmapapi.sktelecom.com/upload/tmap/marker/pin_r_m_s.png", // 기본 출발지 마커 이미지
-          iconSize: new Tmapv3.Size(24, 38),
-          map: this.map
-        });
+        // 경로 데이터를 가져옴 (로컬 파일이나 서버에서)
+        const response = await this.tmapApi.get('http://localhost:3000/tmap_raw');
+        console.log("경로 정보:", response.data.features);
         
-        // 도착지 마커 생성
-        this.endMarker = new Tmapv3.Marker({
-          position: endLatLng,
-          icon: "https://tmapapi.sktelecom.com/upload/tmap/marker/pin_r_m_e.png", // 기본 도착지 마커 이미지
-          iconSize: new Tmapv3.Size(24, 38),
-          map: this.map
-        });
+        const features = response.data.features;
+        
+        // 경로의 시작점과 끝점 좌표를 저장할 변수
+        let startPoint, endPoint;
+        
+        // 경로 데이터 처리
+        for (let i = 0; i < features.length; i++) {
+          const feature = features[i];
+          
+          /* if (feature.geometry.type === "LineString"){
+            const coordinates = feature.geometry.coordinates;
+            coordinates.forEach(coord => {
+              console.log(i + " 구간 좌표:", coord[0], coord[1]);
+            });
+          } */
 
-        console.log('경로 검색 시작:', startPoint, endPoint);
 
-        // API 직접 호출
-        const response = await this.tmapApi.post('/routes/pedestrian', {
-          version: 1,
-          startX: startPoint.lon,
-          startY: startPoint.lat,
-          endX: endPoint.lon,
-          endY: endPoint.lat,
-          reqCoordType: 'WGS84GEO',
-          resCoordType: 'WGS84GEO',
-          searchOption: '0',
-          trafficInfo: 'Y'
-        });
+          // LineString 타입의 요소만 처리 (실제 경로 라인)
+          if (feature.geometry.type === "LineString") {
+            const coordinates = feature.geometry.coordinates;
+            const latLngArr = coordinates.map(coord => 
+              new Tmapv3.LatLng(coord[1], coord[0])
+            );
+
+            console.log(i + " 구간 좌표:", latLngArr);
+            
+            // 경로 라인 생성
+            const polyline = new Tmapv3.Polyline({
+              path: latLngArr, // 경로 좌표 배열: [LatLng, LatLng, ...]
+              strokeColor: "#5760E5",
+              strokeWeight: 5,
+              strokeOpacity: 1,
+              map: this.map
+            });
+            
+            this.routeLines.push(polyline);
+          } 
+          // Point 타입의 요소 처리 (시작점, 경유지, 회전지점)
+          else if (feature.geometry.type === "Point") {
+            const coord = feature.geometry.coordinates;
+            const latLng = new Tmapv3.LatLng(coord[1], coord[0]);
+            
+            // 포인트 타입에 따라 마커 설정
+            let markerType;
+            if (feature.properties.pointType === "S") {
+              // 시작점
+              markerType = "start";
+              startPoint = latLng;
+            } else if (feature.properties.pointType === "E") {
+              // 도착점
+              markerType = "end";
+              endPoint = latLng;
+            } else if (feature.properties.pointType === "N") {
+              // 회전지점
+              // markerType = "waypoint";
+              continue;
+            } else {
+              continue; // 다른 포인트 타입은 처리하지 않음
+            }
+            
+            // 마커 이미지 설정
+            let markerImg, markerSize;
+            if (markerType === "start") {
+              markerImg = "../assets/images/start.png";
+              markerSize = new Tmapv3.Size(28, 28);
+            } else if (markerType === "end") {
+              markerImg = "../assets/images/end.png";
+              markerSize = new Tmapv3.Size(28, 28);
+            } else {
+              // 경유지는 작은 원형 마커로 표시
+              // markerImg = "http://tmapapi.sktelecom.com/upload/tmap/marker/pin_b_m_p.png";
+              // markerSize = new Tmapv3.Size(12, 12);
+            }
+            
+            // 마커 생성
+            const marker = new Tmapv3.Marker({
+              position: latLng,
+              icon: new URL(markerImg, import.meta.url).href,
+              iconSize: markerSize,
+              title: feature.properties.name,
+              map: this.map
+            });
+            
+            this.markerPoints.push(marker);
+          }
+        }
         
-        console.log('경로 응답:', response.data);
+        // 시작점과 끝점으로 bounds 설정
+        const bounds = new Tmapv3.LatLngBounds(startPoint, endPoint);
+
+        // 1. 기본 fitBounds 실행
+        this.map.fitBounds(bounds);
+        // 2. 추가 여백 설정 (예: 20px)
+        const padding = { top: 140, bottom: 280, left: 50, right: 50 };
+        this.map.fitBounds(bounds, padding);
         
-        // 응답 데이터를 이용해 경로 그리기
-        this.drawRouteFromResponse(response.data);
+        // 경로 정보 저장
+        this.route = response.data;
         
       } catch (error) {
-        console.error('경로 검색 중 오류 발생:', error);
-        alert('경로 검색 중 오류가 발생했습니다.');
+        console.error("경로 요청 오류", error);
       }
     },
 
-    // 응답 데이터를 이용해 경로 그리기
-    drawRouteFromResponse(routeData) {
-      if (!routeData || !routeData.features) {
-        console.error('유효하지 않은 경로 데이터');
-        return;
-      }
-      
-      this.routeLayer = [];
-      
-      routeData.features.forEach(feature => {
-        if (feature.geometry && feature.geometry.type === 'LineString') {
-          const coords = feature.geometry.coordinates;
-          
-          // 경로 좌표 추출
-          const points = [];
-          coords.forEach(coord => {
-            // TMap API는 [경도, 위도] 순서로 좌표를 제공
-            points.push(new Tmapv3.LatLng(coord[1], coord[0]));
-          });
-          
-          // 선 스타일 설정
-          let strokeColor = '#FF0000'; // 기본 빨간색
-          const strokeWeight = 6;
-          
-          // 교통 정보가 있는 경우 색상 변경
-          if (feature.properties && feature.properties.trafficIndex) {
-            switch (feature.properties.trafficIndex) {
-              case 0: // 정보 없음
-                strokeColor = '#636363';
-                break;
-              case 1: // 원활
-                strokeColor = '#19b069';
-                break;
-              case 2: // 서행
-                strokeColor = '#f39019';
-                break;
-              case 3: // 정체
-                strokeColor = '#ff5a5a';
-                break;
-              case 4: // 심각한 정체
-                strokeColor = '#b52e2e';
-                break;
-            }
-          }
-          
-          // 경로선 생성
-          const polyline = new Tmapv3.Polyline({
-            path: points,
-            strokeColor: strokeColor,
-            strokeWeight: strokeWeight,
-            strokeOpacity: 0.7,
-            map: this.map
-          });
-          
-          // 경로 레이어에 추가
-          this.routeLayer.push(polyline);
-          
-          // 경로 범위에 맞게 지도 조정 (개별 라인별로 하는 것보다 전체 경로에 대해 한 번만 하는 것이 좋음)
-          if (this.routeLayer.length === 1) { // 첫 번째 라인일 때만 실행
-            const bounds = new Tmapv3.LatLngBounds();
-            points.forEach(point => bounds.extend(point));
-            this.map.fitBounds(bounds, { padding: 50 });
-          }
+    // 4. 경로 안내 시작
+    startGuidance() {
+      console.log("경로 안내 시작");
+      // 여기에 경로 안내 시작 로직 추가
+      this.showRouteInfoModal = false;
+      this.showRouteHeader = true;
+      this.showSearchBox = false;
+      this.showLocationButton = false;
+      this.$store.commit('setHomePageState', false); // BottomNav 설정
+    },
+
+    // 5. 경로 안내 종료
+    endGuidance() {
+      console.log("경로 안내 종료");
+      this.showRouteInfoModal = false;
+      this.showRouteHeader = false;
+      this.showSearchBox = true;
+      this.showLocationButton = true;
+      this.$store.commit('setHomePageState', true); // BottomNav 설정
+
+      try {
+        // 경로 객체 삭제
+        if (this.routeLines && this.routeLines.length > 0) {
+          this.routeLines.forEach(line => line.setMap(null));
         }
-      });
-    },
-    testRouteSearch() {
-      // 테스트용 출발지/도착지 좌표 (서울역과 광화문)
-      const startPoint = { lat: 37.5536, lon: 126.9696 }; // 서울역
-      const endPoint = { lat: 37.5726, lon: 126.9760 };   // 광화문
-      
-      // jQuery 없는 방식으로 경로 검색 테스트
-      this.searchRouteWithAxios(startPoint, endPoint);
-    },
-    // 기존 경로 및 마커 삭제하는 메소드
-    clearRoute() {
-      // 출발지, 도착지 마커 삭제
-      if (this.startMarker) {
-        this.startMarker.setMap(null);
-        this.startMarker = null;
-      }
-      
-      if (this.endMarker) {
-        this.endMarker.setMap(null);
-        this.endMarker = null;
-      }
-      
-      // 경로 레이어 삭제
-      if (this.routeLayer) {
-        if (Array.isArray(this.routeLayer)) {
-          this.routeLayer.forEach(layer => {
-            if (layer) layer.setMap(null);
-          });
-        } else {
-          this.routeLayer.setMap(null);
+        if (this.markerPoints && this.markerPoints.length > 0) {
+          this.markerPoints.forEach(marker => marker.setMap(null));
         }
-        this.routeLayer = null;
+      }
+      catch (error) {
+        console.error("경로 종료 오류", error);
       }
     },
- */
+  
   }
 }
 </script>
@@ -450,7 +475,7 @@ export default {
 }
 .route-test-button {
   position: fixed;
-  right: 20px;
+  right: 200px;
   bottom: 80px;
   background-color: #2196F3;
   color: white;
@@ -463,6 +488,24 @@ export default {
 }
 
 .route-test-button:active {
+  background-color: #1976D2;
+}
+
+.light-test-button {
+  position: fixed;
+  right: 20px;
+  bottom: 80px;
+  background-color: #2196F3;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 24px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.light-test-button:active {
   background-color: #1976D2;
 }
 </style>

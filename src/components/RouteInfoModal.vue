@@ -12,7 +12,7 @@
             <span class="value">1.2km</span>
         </div>
         </div>
-        <div class="icon-box">
+        <div class="icon-box" @click="startGuidance">
         <div class="circle">
             <img src="../assets\images\running.png" alt="속도안내 버튼">
         </div>
@@ -28,9 +28,14 @@ export default {
   name: 'RouteInfoModal',
   data() {
     return {
-      showModal: false,
       modalMessage: '',
     };
+  },
+  methods: {
+    startGuidance() {
+      console.log('Guidance started');
+      this.$emit('startGuidance');
+    },
   },
 };
 </script>
@@ -43,12 +48,25 @@ export default {
       font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
     }
 
-    .route-info-modal {
+    /* .route-info-modal {
       display: flex;
       justify-content: center;
       align-items: flex-end;
       height: 100vh;
       padding-bottom: 50px;
+
+      z-index: 1000;
+      position: fixed;
+    } */
+    .route-info-modal {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      padding-bottom: 50px;
+      z-index: 1000;
     }
 
     .modal {
@@ -57,7 +75,8 @@ export default {
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
       padding: 20px 24px;
       width: 100%;
-      max-width: 350px;
+      /* max-width: 350px; */
+      width: 350px; /* 고정 너비 설정 */
       margin: 0 10px;
     }
 
