@@ -13,7 +13,7 @@ const store = createStore({
                 lng: 0,
                 distance: 0,
             },
-            homePageState: 0, // 0: home, 1: search
+            homePageState: true, 
         }
     },
     mutations: {

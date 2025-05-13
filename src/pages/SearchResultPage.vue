@@ -35,7 +35,7 @@
 
     methods: {
       goBack() {
-        this.$store.commit('setHomePageState', 0); 
+        this.$store.commit('setHomePageState', true); 
         this.$router.push('/home');
       }
     },
