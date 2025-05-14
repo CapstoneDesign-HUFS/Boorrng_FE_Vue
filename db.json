@@ -1,23 +1,48 @@
 {
     "traffic-light": {
         "intersectionName": "청계2가",
-        "timestamp": "2025-05-04T07:58:55.431000+00:00",
+        "timestamp": "2025-05-14T01:44:49.044000+00:00",
         "signals": [
-        {
-            "direction": "북쪽",
-            "signalColor": "green",
-            "remainingSeconds": 21.3
-        },
-        {
-            "direction": "동쪽",
-            "signalColor": "red",
-            "remainingSeconds": 121.3
-        },
-        {
-            "direction": "남쪽",
-            "signalColor": "red",
-            "remainingSeconds": 21.3
-        }
+            {
+                "direction": "nt",
+                "signalColor": "green",
+                "remainingSeconds": 37.5
+            },
+            {
+                "direction": "et",
+                "signalColor": "red",
+                "remainingSeconds": 50.5
+            },
+            {
+                "direction": "st",
+                "signalColor": "green",
+                "remainingSeconds": 37.5
+            },
+            {
+                "direction": "wt",
+                "signalColor": null,
+                "remainingSeconds": null
+            },
+            {
+                "direction": "ne",
+                "signalColor": null,
+                "remainingSeconds": null
+            },
+            {
+                "direction": "nw",
+                "signalColor": null,
+                "remainingSeconds": null
+            },
+            {
+                "direction": "se",
+                "signalColor": null,
+                "remainingSeconds": null
+            },
+            {
+                "direction": "sw",
+                "signalColor": null,
+                "remainingSeconds": null
+            }
         ]
     },
 

@@ -47,7 +47,7 @@ export default {
       searchResults: null,
       tmapKey: import.meta.env.VITE_APP_TMAP, // .env 파일에서 TMap API 키 가져오기
       tmapApi: null,
-      currentLocation: {lat: 37.566481622437934, lon: 126.98502302169841},
+      currentLocation: {lat: 37.594453, lon: 127.079074}, // 예지다움 오피스텔
 
       isSearched: false, // 검색 여부
 
@@ -201,6 +201,7 @@ export default {
         navigator.geolocation.getCurrentPosition((position) => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
+          console.log('현재 위치:', lat, lon);
           
           // 현재 위치로 지도 중심 이동
           this.map.setCenter(new Tmapv3.LatLng(lat, lon));
@@ -262,15 +263,15 @@ export default {
 
       this.signalMarker = new Tmapv3.Marker({
         position: new Tmapv3.LatLng(this.signalLocation.lat, this.signalLocation.lon),
-        icon: new URL('../assets/images/traffic-light.png', import.meta.url).href,
-        iconSize: new Tmapv3.Size(60, 60), // 작게 설정
+        icon: new URL('../assets/images/traffic-lights-icon.png', import.meta.url).href,
+        iconSize: new Tmapv3.Size(50, 50), // 작게 설정
         map: this.map
       });
       this.signalMarker.on('click', this.handleSignalMarkerClick)
     },
     handleSignalMarkerClick(event) {
       console.log("신호등 마커 클릭됨", event);
-      // 여기에 신호등 마커 클릭 시 처리할 로직 추가
+      // 신호등 마커 클릭 시 처리할 로직 
       this.showSignalModal = true;
     },
     closeSignalModal() {
