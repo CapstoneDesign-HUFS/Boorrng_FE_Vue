@@ -349,15 +349,15 @@ export default {
             
             // 포인트 타입에 따라 마커 설정
             let markerType;
-            if (feature.properties.pointType === "S") {
+            if (feature.properties.pointType === "SP") {
               // 시작점
               markerType = "start";
               startPoint = latLng;
-            } else if (feature.properties.pointType === "E") {
+            } else if (feature.properties.pointType === "EP") {
               // 도착점
               markerType = "end";
               endPoint = latLng;
-            } else if (feature.properties.pointType === "N") {
+            } else if (feature.properties.pointType === "GP") {
               // 회전지점
               // markerType = "waypoint";
               continue;
@@ -391,15 +391,25 @@ export default {
             this.markerPoints.push(marker);
           }
         }
-        
-        // 시작점과 끝점으로 bounds 설정
-        const bounds = new Tmapv3.LatLngBounds(startPoint, endPoint);
 
-        // 1. 기본 fitBounds 실행
-        this.map.fitBounds(bounds);
-        // 2. 추가 여백 설정 (예: 20px)
-        const padding = { top: 140, bottom: 280, left: 50, right: 50 };
-        this.map.fitBounds(bounds, padding);
+        // 시작점과 끝점으로 bounds 설정
+        if (startPoint && endPoint) {
+          const bounds = new Tmapv3.LatLngBounds(startPoint, endPoint);
+
+          // 1. 기본 fitBounds 실행
+          this.map.fitBounds(bounds);
+          // 2. 추가 여백 설정
+          const padding = { top: 140, bottom: 280, left: 50, right: 50 };
+          this.map.fitBounds(bounds, padding);
+        } else {
+          console.log("시작점 또는 끝점이 정의되지 않았습니다.");
+          // 기본 지도 중심 설정
+          if (startPoint) {
+            this.map.setCenter(startPoint);
+          } else if (endPoint) {
+            this.map.setCenter(endPoint);
+          }
+        }
         
         // 경로 정보 저장
         this.route = response.data;
