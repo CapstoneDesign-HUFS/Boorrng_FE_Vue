@@ -15,6 +15,22 @@
   <div class="light-test-button" @click="showSignal">
     <span>신호등 정보</span>
   </div>
+
+  <!--속도 출력 테스트-->
+
+  <div class="speed-button" @click="toggleSpeedMeasurement">
+    <span>{{ speedMeasurement.isActive ? '속도 측정 중지' : '속도 측정 시작' }}</span>
+  </div>
+
+  <!-- template 섹션에 추가 -->
+  <div v-if="showSpeedDisplay" class="speed-display">
+    <div class="speed-value">{{ speedMeasurement.displaySpeedKmh }}</div>
+    <!-- <div class="speed-unit">km/h</div> -->
+    <div class="speed-unit">m/s</div>
+  </div>
+
+
+
   <SignalModal v-if="this.showSignalModal===true" @closeModal="closeSignalModal" />
   
   <RouteInfoModal v-if="showRouteInfoModal" @startGuidance="startGuidance"/>
@@ -74,6 +90,20 @@ export default {
       showSearchBox: true,
       showLocationButton: true,
 
+      // 실시간 속도 측정
+      watchPositionId: null,
+      speedMeasurement: {
+        isActive: false,
+        currentSpeed: 0,  // m/s
+        avgSpeed: 0,      // m/s
+        distance: 0,      // meters
+        startTime: null,
+        lastPosition: null,
+        positions: [],
+        displaySpeedKmh: '0.0',  // 화면에 표시할 km/h 속도
+      },
+      showSpeedDisplay: false,
+
     };
   },
   created(){
@@ -126,6 +156,31 @@ export default {
         this.resizeMap();
       } else {
         console.error("TMap API가 로드되지 않았습니다.");
+      }
+
+
+      console.log('현재 위치로 이동');
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          console.log('현재 위치:', lat, lon);
+          
+          // 현재 위치로 지도 중심 이동
+          this.map.setCenter(new Tmapv3.LatLng(lat, lon));
+          
+          // GPS 마커 생성
+          this.createGpsMarker(lat, lon);
+          
+        }, (error) => {
+          console.error('위치 정보를 가져오는 데 실패했습니다.', error);
+        }, {
+          enableHighAccuracy: true, // 높은 정확도 (배터리 소모 증가)
+          timeout: 5000,            // 최대 대기 시간
+          maximumAge: 0             // 캐시된 위치 정보 사용 안 함
+        });
+      } else {
+        alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
       }
     },
     resizeMap() {
@@ -452,6 +507,184 @@ export default {
         console.error("경로 종료 오류", error);
       }
     },
+
+    // 6. 실시간 속도 측정 시작
+    startSpeedMeasurement() {
+      if (this.speedMeasurement.isActive) return;
+      
+      console.log("보행 속도 측정 시작");
+      this.speedMeasurement.isActive = true;
+      this.speedMeasurement.startTime = new Date();
+      this.speedMeasurement.positions = [];
+      this.speedMeasurement.distance = 0;
+      this.speedMeasurement.currentSpeed = 0;
+      this.speedMeasurement.avgSpeed = 0;
+      this.speedMeasurement.lastPosition = null;
+      this.showSpeedDisplay = true;
+      
+      // 위치 추적 시작
+      if (navigator.geolocation) {
+        this.watchPositionId = navigator.geolocation.watchPosition(
+          this.handlePositionUpdate,
+          (error) => {
+            console.error('위치 추적 오류:', error);
+            alert('위치 정보를 가져오는 데 실패했습니다.');
+            this.stopSpeedMeasurement();
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
+      }
+    },
+
+    // 위치 업데이트 핸들러
+    handlePositionUpdate(position) {
+      const currentPosition = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        timestamp: new Date(),
+        accuracy: position.coords.accuracy
+      };
+      
+      // 첫 위치인 경우
+      if (!this.speedMeasurement.lastPosition) {
+        this.speedMeasurement.lastPosition = currentPosition;
+        this.speedMeasurement.positions.push(currentPosition);
+        return;
+      }
+      
+      // 이전 위치와 현재 위치 사이의 거리 계산 (미터 단위)
+      const distance = this.calculateDistance(
+        this.speedMeasurement.lastPosition.lat,
+        this.speedMeasurement.lastPosition.lon,
+        currentPosition.lat,
+        currentPosition.lon
+      );
+      
+      // 시간 차이 계산 (초 단위)
+      const timeDiff = (currentPosition.timestamp - this.speedMeasurement.lastPosition.timestamp) / 1000;
+      
+      // 현재 속도 계산 (m/s)
+      if (timeDiff > 0) {
+        // 정확도가 너무 낮은 경우 필터링 (예: 50m 이상인 경우)
+        if (currentPosition.accuracy <= 50) {
+          this.speedMeasurement.currentSpeed = distance / timeDiff;
+          this.speedMeasurement.distance += distance;
+          
+          // 평균 속도 계산 (m/s)
+          const totalTime = (currentPosition.timestamp - this.speedMeasurement.startTime) / 1000;
+          if (totalTime > 0) {
+            this.speedMeasurement.avgSpeed = this.speedMeasurement.distance / totalTime;
+          }
+          
+          // 표시용 km/h 속도 변환 (소수점 한 자리까지)
+          // this.speedMeasurement.displaySpeedKmh = (this.speedMeasurement.currentSpeed * 3.6).toFixed(1);
+          this.speedMeasurement.displaySpeedKmh = this.speedMeasurement.currentSpeed.toFixed(1);
+          
+          // 현재 위치 저장
+          this.speedMeasurement.positions.push(currentPosition);
+          this.speedMeasurement.lastPosition = currentPosition;
+          
+          // 지도 위치 업데이트
+          this.updateMapWithCurrentPosition(currentPosition);
+        }
+      }
+    },
+    
+    // 두 지점 간의 거리 계산 (Haversine 공식)
+    calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // 지구 반경 (미터)
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+      
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      
+      return R * c; // 미터 단위 거리
+    },
+    
+    // 지도 위치 업데이트
+    updateMapWithCurrentPosition(position) {
+      // 현재 위치로 지도 중심 이동
+      this.map.setCenter(new Tmapv3.LatLng(position.lat, position.lon));
+      
+      // GPS 마커 생성/업데이트
+      this.createGpsMarker(position.lat, position.lon);
+    },
+    
+    // 속도 측정 종료
+    stopSpeedMeasurement() {
+      if (!this.speedMeasurement.isActive) return;
+      
+      console.log("보행 속도 측정 종료");
+      
+      if (this.watchPositionId !== null) {
+        navigator.geolocation.clearWatch(this.watchPositionId);
+        this.watchPositionId = null;
+      }
+      
+      this.speedMeasurement.isActive = false;
+      this.showSpeedDisplay = false;
+      
+      // 측정 결과 출력
+      console.log("측정 결과:");
+      console.log(`총 이동 거리: ${this.speedMeasurement.distance.toFixed(2)}m`);
+      console.log(`평균 속도: ${(this.speedMeasurement.avgSpeed * 3.6).toFixed(2)}km/h`);
+      console.log(`경과 시간: ${((new Date() - this.speedMeasurement.startTime) / 1000).toFixed(0)}초`);
+    },
+    toggleSpeedMeasurement() {
+      if (this.speedMeasurement.isActive) {
+        this.endGuidanceTemp();    // 활성화 상태일 때 종료 메서드를 호출
+      } else {
+        this.startGuidanceTemp();  // 비활성화 상태일 때 시작 메서드를 호출
+      }
+    },
+    startGuidanceTemp() {
+      console.log("경로 안내 시작");
+      // 여기에 경로 안내 시작 로직 추가
+      this.showRouteInfoModal = false;
+      this.showRouteHeader = true;
+      this.showSearchBox = false;
+      this.showLocationButton = false;
+      this.$store.commit('setHomePageState', false); // BottomNav 설정
+
+      // 속도 측정 시작
+      this.startSpeedMeasurement();
+
+    },
+    endGuidanceTemp() {
+      console.log("경로 안내 종료");
+      this.showRouteInfoModal = false;
+      this.showRouteHeader = false;
+      this.showSearchBox = true;
+      this.showLocationButton = true;
+      this.$store.commit('setHomePageState', true); // BottomNav 설정
+
+      // 속도 측정 종료
+      this.stopSpeedMeasurement();
+
+      try {
+        // 경로 객체 삭제
+        if (this.routeLines && this.routeLines.length > 0) {
+          this.routeLines.forEach(line => line.setMap(null));
+        }
+        if (this.markerPoints && this.markerPoints.length > 0) {
+          this.markerPoints.forEach(marker => marker.setMap(null));
+        }
+      }
+      catch (error) {
+        console.error("경로 종료 오류", error);
+      }
+    },
   
   }
 }
@@ -518,5 +751,52 @@ export default {
 
 .light-test-button:active {
   background-color: #1976D2;
+}
+
+
+
+/* 속도 측정 임시 */
+/* style 섹션에 추가 */
+.speed-display {
+  position: fixed;
+  top: 100px; /* RouteHeader 아래에 위치 */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 12px;
+  padding: 12px 24px;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  z-index: 900;
+  width: 160px;
+}
+
+.speed-value {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.speed-unit {
+  font-size: 16px;
+  opacity: 0.8;
+}
+.speed-button {
+  position: fixed;
+  right: 20px;
+  bottom: 150px; /* 다른 버튼들 위에 위치하도록 조정 */
+  background-color: #FF5722; /* 오렌지 색상으로 구분 */
+  color: white;
+  padding: 12px 16px;
+  border-radius: 24px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  z-index: 900;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.speed-button:active {
+  background-color: #E64A19; /* 클릭 시 더 어두운 색상 */
 }
 </style>
