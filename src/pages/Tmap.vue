@@ -103,6 +103,8 @@ export default {
         displaySpeedKmh: '0.0',  // 화면에 표시할 km/h 속도
       },
       showSpeedDisplay: false,
+      speedBuffer: [], // 최근 속도 값을 저장할 배열
+      speedBufferSize: 5, // 평균에 사용할 값의 개수 (더 큰 값 = 더 부드러운 변화)
 
     };
   },
@@ -570,7 +572,7 @@ export default {
       const timeDiff = (currentPosition.timestamp - this.speedMeasurement.lastPosition.timestamp) / 1000;
       
       // 현재 속도 계산 (m/s)
-      if (timeDiff > 0) {
+      /* if (timeDiff > 0) {
         // 정확도가 너무 낮은 경우 필터링 (예: 50m 이상인 경우)
         if (currentPosition.accuracy <= 50) {
           this.speedMeasurement.currentSpeed = distance / timeDiff;
@@ -584,7 +586,41 @@ export default {
           
           // 표시용 km/h 속도 변환 (소수점 한 자리까지)
           // this.speedMeasurement.displaySpeedKmh = (this.speedMeasurement.currentSpeed * 3.6).toFixed(1);
-          this.speedMeasurement.displaySpeedKmh = this.speedMeasurement.currentSpeed.toFixed(1);
+          this.speedMeasurement.displaySpeedKmh = this.speedMeasurement.currentSpeed.toFixed(1); */
+          if (timeDiff > 0) {
+    if (currentPosition.accuracy <= 20) { // 정확도 필터링
+      // 현재 속도 계산
+      const currentSpeed = distance / timeDiff;
+      
+      // 속도 버퍼에 현재 속도 추가
+      this.speedBuffer.push(currentSpeed);
+      
+      // 버퍼 크기 유지
+      if (this.speedBuffer.length > this.speedBufferSize) {
+        this.speedBuffer.shift(); // 가장 오래된 값 제거
+      }
+      
+      // 이동 평균 계산 (비정상적으로 큰 값은 제외)
+      let validSpeeds = [...this.speedBuffer];
+      if (validSpeeds.length >= 3) {
+        // 중간값 필터링을 위해 속도 정렬
+        validSpeeds.sort((a, b) => a - b);
+        
+        // 너무 크거나 작은 값(이상치) 제거 (상위 25%, 하위 25% 제거)
+        const startIdx = Math.floor(validSpeeds.length * 0.25);
+        const endIdx = Math.ceil(validSpeeds.length * 0.75);
+        validSpeeds = validSpeeds.slice(startIdx, endIdx);
+      }
+      
+      // 필터링된 속도의 평균 계산
+      const avgSpeed = validSpeeds.reduce((sum, speed) => sum + speed, 0) / 
+                       (validSpeeds.length || 1);
+      
+      // 평균 속도를 현재 속도로 설정
+      this.speedMeasurement.currentSpeed = avgSpeed;
+      
+      // 표시용 km/h 속도 변환 (소수점 한 자리까지)
+      this.speedMeasurement.displaySpeedKmh = (avgSpeed * 3.6).toFixed(1);
           
           // 현재 위치 저장
           this.speedMeasurement.positions.push(currentPosition);
