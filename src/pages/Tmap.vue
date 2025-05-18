@@ -12,9 +12,10 @@
     <div class="route-test-button" @click="showRoute">
     <span>경로 테스트</span>
   </div>
-  <div class="light-test-button" @click="showSignal">
+
+<!--   <div class="light-test-button" @click="showSignal">
     <span>신호등 정보</span>
-  </div>
+  </div> -->
 
   <!--속도 출력 테스트-->
 
@@ -31,7 +32,10 @@
 
 
 
-  <SignalModal v-if="this.showSignalModal===true" @closeModal="closeSignalModal" />
+  <SignalModal 
+    :initialIntersectionName="selectedIntersection ? selectedIntersection.name : '로딩 중...'"
+    :intersectionId="selectedIntersection ? selectedIntersection.itst_id : null"
+    v-if="this.showSignalModal===true" @closeModal="closeSignalModal" />
   
   <RouteInfoModal v-if="showRouteInfoModal" @startGuidance="startGuidance"/>
   <RouteHeader v-if="showRouteHeader" @close="endGuidance"/>
@@ -74,6 +78,11 @@ export default {
 
 
       // 신호등 관련
+      intersections: [],
+      signalnMarkers: [],
+
+      selectedIntersection: null,
+
       signalLocation: {
         lat: 0,
         lon: 0,
@@ -159,9 +168,14 @@ export default {
       } else {
         console.error("TMap API가 로드되지 않았습니다.");
       }
+      
+      // 예지다움 오피스텔을 현위치로 사용
+      this.map.setCenter(new Tmapv3.LatLng(this.currentLocation.lat, this.currentLocation.lon));
+      this.createGpsMarker(this.currentLocation.lat, this.currentLocation.lon);
+      this.showSignal();
 
 
-      console.log('현재 위치로 이동');
+      /* console.log('현재 위치로 이동');
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
           const lat = position.coords.latitude;
@@ -183,7 +197,7 @@ export default {
         });
       } else {
         alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
-      }
+      } */
     },
     resizeMap() {
       if (this.map) {
@@ -293,42 +307,78 @@ export default {
       });
     },
 
-    // 2. 신호등 상태 요청(json-server)
-    async getSignalState() {
-      console.log("신호등 정보 요청");
-      try{
-        const response = await axios.get('http://localhost:3000/traffic-light');
-        console.log("신호등 정보:", response.data);
-        // 여기에 신호등 정보를 처리하는 로직 추가
-        this.signalLocation = {lat: 37.5682795, lon: 126.9876861};
-        this.signalState = response.data['signals'][0]['signalColor'];
-        this.remaingSeconds = response.data['signals'][0]['remaingSeconds'];
-      } catch (error) {
-        console.error("신호등 정보 요청 오류", error);
+    // 2. 신호등 요청(json-server)
+    async showSignal() {
+      await this.getIntersectionLocation()
+      console.log("신호등 위치(this):", this.intersections);
+
+      // 기존 마커 제거 (필요시)
+      if (this.signalMarkers) {
+        this.signalMarkers.forEach(marker => marker.setMap(null));
+      }
+      this.signalMarkers = [];
+
+      for (let i = 0; i < this.intersections.length; i++) {
+        const intersection = this.intersections[i];
+        const lat = intersection['latitude'];
+        const lon = intersection['longitude'];
+        console.log(`교차로 마커 생성: ${intersection.name}, 위치: ${lat}, ${lon}`);
+        
+        // 신호등 마커 생성
+        const signalMarker = new Tmapv3.Marker({
+          position: new Tmapv3.LatLng(lat, lon),
+          icon: new URL('../assets/images/traffic-lights-icon.png', import.meta.url).href,
+          iconSize: new Tmapv3.Size(50, 50),
+          map: this.map,
+          title: intersection.name
+        });
+        
+        // 마커에 클릭 이벤트 추가
+        signalMarker.on('click', () => {
+          this.handleSignalMarkerClick(intersection);
+        });
+        
+        // 마커 관리를 위해 배열에 추가
+        this.signalMarkers.push(signalMarker);
       }
     },
-    // 신호등 카운트다운
-    countdownSignal(signal) {
-      console.log("신호등 카운트다운:", signal);
-      // 여기에 신호등 카운트다운 처리 로직 추가
+    // 신호등 위치 요청
+    async getIntersectionLocation() {
+      console.log("신호등 위치 요청");
+      try{
+        const url = `http://woodzverse.pythonanywhere.com/map/traffic-lights/nearby/?lat=${this.currentLocation.lat}&lon=${this.currentLocation.lon}&radius=500`
+        
+        // const response = await axios.get('http://localhost:3000/intersections');
+        const response = await axios.get(url);
+        // 실제 API URL로 변경
+        // const url = `http://woodzverse.pythonanywhere.com/map/traffic-lights/nearby/?lat=${this.currentLocation.lat}&lon=${this.currentLocation.lon}&radius=1000`
+        // const response = await axios.get(url)
+        
+        console.log("신호등 위치:", response.data);
+        
+        if (Array.isArray(response.data)) {
+          console.log("데이터는 배열 형식입니다. 길이:", response.data.length);
+          this.intersections = response.data;
+          console.log("this.intersections 저장 후:", this.intersections);
+        } else {
+          console.error("API 응답이 배열이 아닙니다:", response.data);
+          this.intersections = []; // 기본값으로 초기화
+        }
+        // 여기에 신호등 위치를 처리하는 로직 추가
+        // this.signalLocation = {lat: 37.5682795, lon: 126.9876861};
+        // this.signalState = response.data['signals'][0]['signalColor'];
+        // this.remaingSeconds = response.data['signals'][0]['remaingSeconds'];
+      } catch (error) {
+        console.error("신호등 위치 요청 오류", error);
+      }
     },
 
-    async showSignal(){
-      await this.getSignalState()
-      console.log("신호등 상태:", this.signalState);
-      this.map.setCenter(new Tmapv3.LatLng(this.signalLocation.lat, this.signalLocation.lon));
-
-      this.signalMarker = new Tmapv3.Marker({
-        position: new Tmapv3.LatLng(this.signalLocation.lat, this.signalLocation.lon),
-        icon: new URL('../assets/images/traffic-lights-icon.png', import.meta.url).href,
-        iconSize: new Tmapv3.Size(50, 50), // 작게 설정
-        map: this.map
-      });
-      this.signalMarker.on('click', this.handleSignalMarkerClick)
-    },
-    handleSignalMarkerClick(event) {
-      console.log("신호등 마커 클릭됨", event);
+    async handleSignalMarkerClick(intersection) {
+      console.log("신호등 마커 클릭됨", intersection);
       // 신호등 마커 클릭 시 처리할 로직 
+      this.selectedIntersection = intersection;
+      this.map.setCenter(new Tmapv3.LatLng(intersection.latitude, intersection.longitude));
+
       this.showSignalModal = true;
     },
     closeSignalModal() {

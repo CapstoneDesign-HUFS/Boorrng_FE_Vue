@@ -84,6 +84,10 @@ export default {
         location: {
             type: Object,
             default: () => ({ lat: 0, lon: 0 })
+        },
+        intersectionId: {
+            type: Number,
+            default: null
         }
     },
     data() {
@@ -185,84 +189,80 @@ export default {
             }
 
             try {
-                // 기존 타이머 모두 중지 (새로운 데이터로 갱신하기 전 정리)
+                // 요청 시작 시간 기록
+                const requestStartTime = Date.now();
+                
                 this.stopAllCountdowns();
                 
-                const response = await axios.get('http://localhost:3000/traffic-light');
-                console.log("교차로 신호등 데이터:", response.data);
+                const url = `http://woodzverse.pythonanywhere.com/map/traffic-lights/signal-status/?itsId=${this.intersectionId}`;
+                const response = await axios.get(url);
                 
-                // API 응답 구조 확인
+                // 응답 수신 후 경과 시간 계산 (밀리초)
+                const elapsedTime = Math.round((Date.now() - requestStartTime) / 1000);
+                console.log(`데이터 요청 및 처리 지연: ${elapsedTime}초`);
+                
                 let signalData = response.data;
                 
-                // 만약 응답이 "traffic-light" 객체로 감싸져 있다면
                 if (response.data && response.data["traffic-light"]) {
-                signalData = response.data["traffic-light"];
+                    signalData = response.data["traffic-light"];
                 }
                 
-                // 교차로 이름과 타임스탬프 업데이트
                 this.intersectionName = signalData.intersectionName || this.initialIntersectionName;
                 this.timestamp = signalData.timestamp || new Date().toISOString();
                 
-                // API 응답의 신호 데이터 처리
                 if (signalData.signals && Array.isArray(signalData.signals)) {
-                this.updateTrafficLightsFromAPI(signalData.signals);
-                
-                // 활성화된 신호등만 카운트다운 시작 (여기서 타이머 시작)
-                this.startActiveCountdowns();
+                    // 지연 시간을 보정하여 신호등 데이터 업데이트
+                    this.updateTrafficLightsFromAPI(signalData.signals, elapsedTime);
+                    this.startActiveCountdowns();
                 }
                 
-                // 다음 데이터 갱신 예약
                 this.scheduleNextDataFetch();
             } catch (error) {
                 console.error("신호등 데이터 요청 오류:", error);
                 
-                // 비활성 상태면 재시도 중단
                 if (!this.isActive) return;
                 
-                // 오류 발생 시 몇 초 후에 재시도
                 this.scheduledFetchTimeout = setTimeout(() => {
-                if (this.isActive) this.fetchTrafficLightData();
+                    if (this.isActive) this.fetchTrafficLightData();
                 }, 5000);
             }
         },
     
         // API 응답 데이터로 신호등 상태 업데이트
-        updateTrafficLightsFromAPI(signals) {
+        updateTrafficLightsFromAPI(signals, elapsedTime) {
             console.log("신호등 데이터 업데이트:", signals);
+            console.log(`신호 데이터 지연 시간 보정: ${elapsedTime}초`);
             
-            // 모든 신호등을 비활성 상태로 설정
             this.trafficLights.forEach(light => {
                 light.active = false;
             });
             
-            // API에서 받은 신호 데이터를 UI 상태로 변환
             signals.forEach(signal => {
-                // API 응답의 direction을 UI의 인덱스로 변환
                 let index = this.getDirectionIndex(signal.direction);
                 
                 if (index !== -1) {
-                // signalColor와 remainingSeconds가 null이면 비활성 상태로 설정
-                if (signal.signalColor === null || signal.remainingSeconds === null) {
-                    this.trafficLights[index] = {
-                    direction: this.trafficLights[index].direction,
-                    isRed: false,
-                    timeRemaining: 0,
-                    totalTime: 60,
-                    active: false // 비활성 상태
-                    };
-                } else {
-                    // 유효한 데이터가 있으면 활성화
-                    this.trafficLights[index] = {
-                    direction: this.trafficLights[index].direction,
-                    isRed: signal.signalColor === 'red',
-                    timeRemaining: Math.round(signal.remainingSeconds), // 소수점 반올림
-                    totalTime: Math.round(signal.remainingSeconds) + 60, // 총 시간은 API에 없으므로 임의 설정
-                    active: true // 활성화
-                    };
-                }
+                    if (signal.signalColor === null || signal.remainingSeconds === null) {
+                        this.trafficLights[index] = {
+                            direction: this.trafficLights[index].direction,
+                            isRed: false,
+                            timeRemaining: 0,
+                            totalTime: 60,
+                            active: false
+                        };
+                    } else {
+                        // 잔여시간에서 지연 시간 차감하여 보정
+                        const correctedTime = Math.max(0, Math.round(signal.remainingSeconds) - elapsedTime);
+                        
+                        this.trafficLights[index] = {
+                            direction: this.trafficLights[index].direction,
+                            isRed: signal.signalColor === 'red',
+                            timeRemaining: correctedTime, // 보정된 시간 사용
+                            totalTime: Math.round(signal.remainingSeconds) + 60, // 총 시간도 동일하게 유지
+                            active: true
+                        };
+                    }
                 }
             });
-            // 타이머 시작은 여기서 하지 않고 fetchTrafficLightData에서 함
         },
     
         // 방향 문자열을 인덱스로 변환
