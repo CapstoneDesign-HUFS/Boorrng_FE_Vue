@@ -194,7 +194,7 @@ export default {
                 
                 this.stopAllCountdowns();
                 
-                const url = `http://woodzverse.pythonanywhere.com/map/traffic-lights/signal-status/?itsId=${this.intersectionId}`;
+                const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/signal-status/?itsId=${this.intersectionId}`;
                 const response = await axios.get(url);
                 
                 // 응답 수신 후 경과 시간 계산 (밀리초)

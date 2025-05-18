@@ -346,7 +346,7 @@ export default {
     async getIntersectionLocation() {
       console.log("신호등 위치 요청");
       try{
-        const url = `http://woodzverse.pythonanywhere.com/map/traffic-lights/nearby/?lat=${this.currentLocation.lat}&lon=${this.currentLocation.lon}&radius=500`
+        const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/nearby/?lat=${this.currentLocation.lat}&lon=${this.currentLocation.lon}&radius=500`
         
         // const response = await axios.get('http://localhost:3000/intersections');
         const response = await axios.get(url);
