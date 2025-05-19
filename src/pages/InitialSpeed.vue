@@ -2,52 +2,60 @@
   <div class="phone-frame">
     <div class="content">      
       <div class="main-title">
-        <h1 class="title-text">{{ name }} 님을 위한<br><span class="title-highlight">{{ age }}대 {{ gender }}</span><br>평균 보행속도 추천</h1>
+        <h1 class="title-text">{{ name }} 님을 위한<br><span class="title-highlight">{{ age }}대 {{ genderText }}</span><br>평균 보행속도 추천</h1>
       </div>
       
-      <div class="speed-section">
-        <h2 class="section-title">최저속도를 설정해주세요</h2>
-        <div class="speed-options">
-          <div 
-            v-for="option in speedOptions" 
-            :key="`min-${option.value}`"
-            class="speed-option" 
-            :class="{ selected: minSelectedSpeed === option.value }" 
-            @click="selectOption('min', option.value)"
-          >
-            <div class="speed-name">{{ option.name }}</div>
-            <div class="speed-value">{{ option.value }}m/s</div>
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>추천 속도 불러오는 중...</p>
+      </div>
+      
+      <template v-else>
+        <div class="speed-section">
+          <h2 class="section-title">최저속도를 설정해주세요</h2>
+          <div class="speed-options">
+            <div 
+              v-for="option in speedOptions" 
+              :key="`min-${option.value}`"
+              class="speed-option" 
+              :class="{ selected: minSelectedSpeed === option.value }" 
+              @click="selectOption('min', option.value)"
+            >
+              <div class="speed-name">{{ option.name }}</div>
+              <div class="speed-value">{{ option.value }}m/s</div>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div class="speed-section">
-        <h2 class="section-title">최고속도를 설정해주세요</h2>
-        <div class="speed-options">
-          <div 
-            v-for="option in speedOptions" 
-            :key="`max-${option.value}`"
-            class="speed-option" 
-            :class="{ selected: maxSelectedSpeed === option.value }" 
-            @click="selectOption('max', option.value)"
-          >
-            <div class="speed-name">{{ option.name }}</div>
-            <div class="speed-value">{{ option.value }}m/s</div>
+        
+        <div class="speed-section">
+          <h2 class="section-title">최고속도를 설정해주세요</h2>
+          <div class="speed-options">
+            <div 
+              v-for="option in speedOptions" 
+              :key="`max-${option.value}`"
+              class="speed-option" 
+              :class="{ selected: maxSelectedSpeed === option.value }" 
+              @click="selectOption('max', option.value)"
+            >
+              <div class="speed-name">{{ option.name }}</div>
+              <div class="speed-value">{{ option.value }}m/s</div>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div class="button-container">
-          <button class="next-button" @click="goToNext">다음으로</button>
+        
+        <div class="button-container">
+          <button class="next-button" @click="saveSettings" :disabled="isSaving">
+            {{ isSaving ? '저장 중...' : '다음으로' }}
+          </button>
         </div>
-
+      </template>
     </div>
     
     <svg class="wave-decoration" viewBox="0 0 1200 120" preserveAspectRatio="none">
       <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V0C50.75,0,116.21,29.87,181.06,54.47,229.93,74.39,280.09,70.22,321.39,56.44Z" fill="#c6f264"></path>
     </svg>
 
-    <!-- 모달 (옵션) -->
+    <!-- 모달 -->
     <div v-if="showModal" class="modal">
       <div class="modal-content">
         <p>{{ modalMessage }}</p>
@@ -58,25 +66,155 @@
 </template>
 
 <script>
+import axios from 'axios';
+import { mapGetters } from 'vuex';
+
 export default {
   name: 'InitialSpeed',
   data() {
     return {
-      name: '김민지',
-      age: '20',
-      gender: '여성',
-      minSelectedSpeed: null, // 기본값 설정 (걷기)
-      maxSelectedSpeed: null, // 기본값 설정 (빨리걷기)
+      name: '',
+      age: '',
+      gender: '',
+      minSelectedSpeed: null,
+      maxSelectedSpeed: null,
       showModal: false,
       modalMessage: '',
-      speedOptions: [
-        { name: '걷기', value: 1.23 },
-        { name: '빨리걷기', value: 1.45 },
-        { name: '뛰기', value: 1.67 }
-      ]
+      loading: true,
+      isSaving: false,
+      speedOptions: []
     };
   },
+  computed: {
+    ...mapGetters(['getAccessToken', 'getUser']),
+    genderText() {
+      return this.gender === 1 ? '남성' : '여성';
+    }
+  },
+  created() {
+    // 먼저 사용자 정보를 가져와서 속도가 이미 설정되어 있는지 확인
+    this.checkUserSettings();
+  },
   methods: {
+    async checkUserSettings() {
+      try {
+        this.loading = true;
+        const token = this.getAccessToken;
+        
+        if (!token) {
+          this.showError('로그인이 필요합니다.');
+          return;
+        }
+        
+        // 사용자 정보 조회 API 호출
+        const response = await axios.get('https://woodzverse.pythonanywhere.com/member/info/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        const userData = response.data;
+        
+        // 사용자 정보 설정
+        this.name = userData.nickname || '사용자';
+        this.gender = userData.gender;
+        this.age = userData.age ? Math.floor(userData.age / 10) * 10 : '20';
+        
+        // 속도 설정 여부 확인을 제거하고 바로 추천 속도 가져오기
+        this.fetchRecommendedSpeeds();
+        
+      } catch (error) {
+        console.error('사용자 정보를 가져오는 중 오류 발생:', error);
+        
+        // 오류 응답 코드에 따른 처리
+        if (error.response) {
+          if (error.response.status === 404) {
+            console.log('API 엔드포인트를 찾을 수 없습니다. 기본 추천 속도를 사용합니다.');
+          } else if (error.response.status === 401) {
+            this.showError('인증이 필요합니다. 다시 로그인해주세요.');
+            // 로그인 페이지로 리디렉션 옵션
+            // this.$router.push({ name: "SignIn" });
+            return;
+          }
+        }
+        
+        // 기본값 설정
+        this.name = this.getUser?.nickname || '사용자';
+        this.gender = this.getUser?.gender || 1;
+        this.age = this.getUser?.age ? Math.floor(this.getUser.age / 10) * 10 : '20';
+        
+        // 오류가 발생해도 추천 속도는 가져오도록 시도
+        this.fetchRecommendedSpeeds();
+      }
+    },
+    async fetchRecommendedSpeeds() {
+      try {
+        this.loading = true;
+        const token = this.getAccessToken;
+        
+        if (!token) {
+          this.showError('로그인이 필요합니다.');
+          return;
+        }
+
+        // API 경로 수정 (추가 경로 확인)
+        const response = await axios.get('https://woodzverse.pythonanywhere.com/velocity/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const { recommendations } = response.data;
+        
+        // 서버에서 받은 추천 속도로 옵션 업데이트
+        this.speedOptions = [
+          { name: '천천히', value: parseFloat(recommendations.slow.toFixed(2)) },
+          { name: '보통', value: parseFloat(recommendations.normal.toFixed(2)) },
+          { name: '빠르게', value: parseFloat(recommendations.fast.toFixed(2)) }
+        ];
+        
+        // 기본값 설정 (보통)
+        this.minSelectedSpeed = recommendations.slow;
+        this.maxSelectedSpeed = recommendations.normal;
+        
+      } catch (error) {
+        console.error('추천 속도를 가져오는 중 오류 발생:', error);
+        
+        // API가 없거나 오류가 발생한 경우 기본 속도 옵션 설정
+        // 성별과 나이에 따라 다른 기본값 설정 - 예시일 뿐 실제 데이터는 다를 수 있음
+        let baseSpeed = 1.2;
+        
+        // 성별에 따른 조정 (남성:1, 여성:2 가정)
+        if (this.gender === 2) {
+          baseSpeed = 1.1; // 여성은 약간 낮게 설정
+        }
+        
+        // 나이에 따른 조정
+        let ageNum = parseInt(this.age);
+        if (ageNum >= 50) {
+          baseSpeed -= 0.2; // 50대 이상은 낮게
+        } else if (ageNum >= 40) {
+          baseSpeed -= 0.1; // 40대는 약간 낮게
+        } else if (ageNum <= 20) {
+          baseSpeed += 0.1; // 20대 이하는 약간 높게
+        }
+        
+        // 기본 속도 옵션 설정
+        this.speedOptions = [
+          { name: '천천히', value: parseFloat((baseSpeed - 0.2).toFixed(2)) },
+          { name: '보통', value: parseFloat(baseSpeed.toFixed(2)) },
+          { name: '빠르게', value: parseFloat((baseSpeed + 0.2).toFixed(2)) }
+        ];
+        
+        // 기본값 설정
+        this.minSelectedSpeed = this.speedOptions[0].value;
+        this.maxSelectedSpeed = this.speedOptions[1].value;
+        
+        // 에러 모달 대신 콘솔에만 표시 (사용자 경험 향상)
+      } finally {
+        this.loading = false;
+      }
+    },
     selectOption(type, speed) {
       if (type === 'min') {
         this.minSelectedSpeed = speed;
@@ -84,37 +222,52 @@ export default {
         this.maxSelectedSpeed = speed;
       }
     },
-      
-    goToNext() {
+    showError(message) {
+      this.modalMessage = message;
+      this.showModal = true;
+    },
+    async saveSettings() {
       // 선택 여부 확인
       if (this.minSelectedSpeed === null || this.maxSelectedSpeed === null) {
-        this.modalMessage = '최저속도와 최고속도를 모두 선택해주세요.';
-        this.showModal = true;
+        this.showError('최저속도와 최고속도를 모두 선택해주세요.');
         return;
       }
         
       // 최저/최고 속도 비교
       if (this.minSelectedSpeed > this.maxSelectedSpeed) {
-        this.modalMessage = '최고속도는 최저속도보다 빠르거나 같아야 합니다.';
-        this.showModal = true;
+        this.showError('최고속도는 최저속도보다 빠르거나 같아야 합니다.');
         return;
       }
+      
+      try {
+        this.isSaving = true;
+        const token = this.getAccessToken;
         
-      // 다음 페이지로 이동
-      // Vue Router를 사용하는 경우: this.$router.push('/home');
-      // 간단한 페이지 이동: window.location.href = '/home';
-      // alert('선택 완료! 다음 페이지로 이동합니다.');
-      this.$router.replace({name: "Home"})
+        if (!token) {
+          this.showError('로그인이 필요합니다.');
+          return;
+        }
         
-      // 실제 구현 시에는 아래 코드 사용
-      // this.$router.push({
-      //   path: '/home',
-      //   query: {
-      //     minSpeed: this.minSelectedSpeed,
-      //     maxSpeed: this.maxSelectedSpeed
-      //   }
-      // });
-    },
+        // 한 번의 API 호출로 최저 및 최고 속도 모두 설정
+        await axios.put('https://woodzverse.pythonanywhere.com/member/info/edit/', {
+          min_speed: this.minSelectedSpeed,
+          max_speed: this.maxSelectedSpeed
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // 다음 페이지로 이동
+        this.$router.replace({ name: "Home" });
+        
+      } catch (error) {
+        console.error('설정 저장 중 오류 발생:', error);
+        this.showError('설정을 저장하는 중 오류가 발생했습니다.');
+      } finally {
+        this.isSaving = false;
+      }
+    }
   }
 };
 </script>
@@ -228,12 +381,12 @@ body {
 }
 
 .button-container {
-    display: flex;
-    gap: 12px;
-    margin-top: 40px;
-    position: relative;
-    z-index: 3;
-  }
+  display: flex;
+  gap: 12px;
+  margin-top: 40px;
+  position: relative;
+  z-index: 3;
+}
 
 .next-button {
   flex: 1;
@@ -254,6 +407,12 @@ body {
   box-shadow: 0 2px 8px rgba(141, 229, 87, 0.3);
 }
 
+.next-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .wave-decoration {
   position: absolute;
   bottom: 0;
@@ -264,7 +423,7 @@ body {
   opacity: 0.15;
 }
 
-/* 모달 스타일 (옵션) */
+/* 모달 스타일 */
 .modal {
   position: fixed;
   top: 0;
@@ -291,6 +450,29 @@ body {
   font-size: 16px;
   color: #333;
   margin-bottom: 16px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 50px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(141, 229, 87, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid #8de557;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @keyframes fadeIn {

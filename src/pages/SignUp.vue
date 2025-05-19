@@ -11,16 +11,14 @@
       <h1 class="form-title">회원가입</h1>
       
       <div class="form-group">
-        <div class="input-row">
-          <input type="text" class="input-field" placeholder="아이디" v-model="formData.username">
-          <button class="check-button" @click="checkDuplicateId">중복확인</button>
-        </div>
+        <input type="email" class="input-field" placeholder="이메일" v-model="formData.email">
+        <p v-if="emailError" class="error-text">{{ emailError }}</p>
       </div>
       
       <div class="form-group">
-        <input :type="passwordType" class="input-field" placeholder="비밀번호" v-model="formData.password">
-        <div class="eye-icon" @click="togglePasswordVisibility('password')">
-          <svg v-if="passwordType === 'password'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <input :type="password1Type" class="input-field" placeholder="비밀번호" v-model="formData.password1">
+        <div class="eye-icon" @click="togglePasswordVisibility('password1')">
+          <svg v-if="password1Type === 'password'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
             <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2"></line>
@@ -33,9 +31,9 @@
       </div>
       
       <div class="form-group">
-        <input :type="confirmPasswordType" class="input-field" placeholder="비밀번호 확인" v-model="formData.confirmPassword">
-        <div class="eye-icon" @click="togglePasswordVisibility('confirmPassword')">
-          <svg v-if="confirmPasswordType === 'password'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <input :type="password2Type" class="input-field" placeholder="비밀번호 확인" v-model="formData.password2">
+        <div class="eye-icon" @click="togglePasswordVisibility('password2')">
+          <svg v-if="password2Type === 'password'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
             <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2"></line>
@@ -45,33 +43,33 @@
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
         </div>
+        <p v-if="passwordError" class="error-text">{{ passwordError }}</p>
       </div>
       
       <div class="form-group">
-        <input type="text" class="input-field" placeholder="이름" v-model="formData.name">
+        <input type="text" class="input-field" placeholder="이름" v-model="formData.nickname">
       </div>
       
       <div class="form-group">
         <div class="input-row">
-          <select id="birth-year" class="input-field" v-model="formData.birthYear">
-            <option value="" disabled selected>출생연도</option>
-            <option v-for="year in birthYears" :key="year" :value="year">{{ year }}년</option>
-          </select>
+          <input type="date" class="input-field" v-model="formData.birthdate">
           
           <select class="input-field" v-model="formData.gender">
             <option value="" disabled selected>성별</option>
-            <option value="male">남성</option>
-            <option value="female">여성</option>
+            <option value="1">남성</option>
+            <option value="2">여성</option>
           </select>
         </div>
       </div>
       
       <div class="terms-container">
-        <div class="custom-checkbox" :class="{ checked: formData.termsAgreed }" @click="toggleTermsAgreement"></div>
-        <span class="terms-text">약관에 동의합니다.<a @click="this.showTerms=true" class="terms-link">약관 보기</a></span>
+        <div class="custom-checkbox" :class="{ checked: termsAgreed }" @click="toggleTermsAgreement"></div>
+        <span class="terms-text">약관에 동의합니다.<a @click="showTerms=true" class="terms-link">약관 보기</a></span>
       </div>
       
-      <button class="submit-button" @click="submitForm">회원가입</button>
+      <button class="submit-button" @click="submitForm" :disabled="isSubmitting">
+        {{ isSubmitting ? '처리 중...' : '회원가입' }}
+      </button>
       
       <p class="login-text">이미 가입하셨나요? <a @click="login" class="login-link">로그인하기</a></p>
       
@@ -81,108 +79,186 @@
     </div>
   </div>
 
-  <Terms2 @close="this.showTerms=false" v-if="showTerms" />
+  <Terms @close="showTerms=false" v-if="showTerms" />
+  <AlertModal :show="showAlert" :message="alertMessage" :type="alertType" @close="showAlert = false"/>
 </template>
 
 <script>
 import Terms from "../components/Terms.vue"
+import AlertModal from "@/components/AlertModal.vue";
+import axios from 'axios';
+import { mapActions } from 'vuex';
+
 export default {
   name: 'SignUp',
   data() {
     return {
       formData: {
-        username: '',
-        password: '',
-        confirmPassword: '',
-        name: '',
-        birthYear: '',
+        email: '',
+        password1: '',
+        password2: '',
+        nickname: '',
+        birthdate: '',
         gender: '',
-        termsAgreed: false
       },
-      passwordType: 'password',
-      confirmPasswordType: 'password',
-      birthYears: [],
+      termsAgreed: false,
+      password1Type: 'password',
+      password2Type: 'password',
       showTerms: false,
+      isSubmitting: false,
+      emailError: '',
+      passwordError: '',
+      showAlert: false,
+      alertMessage: '',
+      alertType: 'info',
     }
   },
   components: {
     Terms,
+    AlertModal,
   },
   methods: {
-    login() {
+    ...mapActions(['login']),
+    navigateToLogin() {
       this.$router.replace({ name: 'SignIn' });
     },
-    generateBirthYears() {
-      const currentYear = new Date().getFullYear();
-      const startYear = 1950;
-      
-      for (let year = currentYear - 10; year >= startYear; year--) {
-        this.birthYears.push(year);
-      }
-    },
     togglePasswordVisibility(field) {
-      if (field === 'password') {
-        this.passwordType = this.passwordType === 'password' ? 'text' : 'password';
-      } else if (field === 'confirmPassword') {
-        this.confirmPasswordType = this.confirmPasswordType === 'password' ? 'text' : 'password';
-      }
-    },
-    checkDuplicateId() {
-      // API 호출 로직 구현
-      if (this.formData.username) {
-        alert('아이디 중복 확인 중...');
-        // 실제로는 서버에 API 요청을 보내서 확인해야 합니다
-        setTimeout(() => {
-          alert('사용 가능한 아이디입니다.');
-        }, 1000);
-      } else {
-        alert('아이디를 입력해주세요.');
+      if (field === 'password1') {
+        this.password1Type = this.password1Type === 'password' ? 'text' : 'password';
+      } else if (field === 'password2') {
+        this.password2Type = this.password2Type === 'password' ? 'text' : 'password';
       }
     },
     toggleTermsAgreement() {
-      this.formData.termsAgreed = !this.formData.termsAgreed;
+      this.termsAgreed = !this.termsAgreed;
+    },
+    showAlertMessage(message, type = 'info') {
+      this.alertMessage = message;
+      this.alertType = type;
+      this.showAlert = true;
     },
     validateForm() {
-      if (!this.formData.username) {
-        alert('아이디를 입력해주세요.');
-        return false;
+      let isValid = true;
+      this.emailError = '';
+      this.passwordError = '';
+      
+      // 이메일 검증
+      if (!this.formData.email) {
+        this.emailError = '이메일을 입력해주세요.';
+        isValid = false;
+      } else {
+        // 이메일 형식 검증
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(this.formData.email)) {
+          this.emailError = '올바른 이메일 형식이 아닙니다.';
+          isValid = false;
+        }
       }
-      if (!this.formData.password) {
-        alert('비밀번호를 입력해주세요.');
-        return false;
+      
+      // 비밀번호 검증
+      if (!this.formData.password1) {
+        this.passwordError = '비밀번호를 입력해주세요.';
+        isValid = false;
+      } else if (this.formData.password1.length < 8) {
+        this.passwordError = '비밀번호는 최소 8자 이상이어야 합니다.';
+        isValid = false;
       }
-      if (this.formData.password !== this.formData.confirmPassword) {
-        alert('비밀번호가 일치하지 않습니다.');
-        return false;
+      
+      if (this.formData.password1 !== this.formData.password2) {
+        this.passwordError = '비밀번호가 일치하지 않습니다.';
+        isValid = false;
       }
-      if (!this.formData.name) {
-        alert('이름을 입력해주세요.');
-        return false;
+      
+      if (!this.formData.nickname) {
+        this.showAlertMessage('이름을 입력해주세요.', 'warning');
+        isValid = false;
       }
-      if (!this.formData.birthYear) {
-        alert('출생연도를 선택해주세요.');
-        return false;
+      
+      if (!this.formData.birthdate) {
+        this.showAlertMessage('생년월일을 선택해주세요.', 'warning');
+        isValid = false;
       }
+      
       if (!this.formData.gender) {
-        alert('성별을 선택해주세요.');
-        return false;
+        this.showAlertMessage('성별을 선택해주세요.', 'warning');
+        isValid = false;
       }
-      if (!this.formData.termsAgreed) {
-        alert('약관에 동의해주세요.');
-        return false;
+      
+      if (!this.termsAgreed) {
+        this.showAlertMessage('약관에 동의해주세요.', 'warning');
+        isValid = false;
       }
-      return true;
+      
+      return isValid;
     },
-    submitForm() {
-      if (this.validateForm()) {
-        alert('회원가입이 완료되었습니다!');
-        // 서버에 회원가입 요청을 보내는 로직 추가
-        console.log('Form submitted:', this.formData);
+    async submitForm() {
+      if (!this.validateForm()) {
+        return;
+      }
+      
+      this.isSubmitting = true;
+      
+      try {
+        // API 요청 데이터 구성
+        const requestData = {
+          email: this.formData.email,
+          password1: this.formData.password1,
+          password2: this.formData.password2,
+          nickname: this.formData.nickname,
+          birthdate: this.formData.birthdate,
+          gender: this.formData.gender,
+          agreed_terms: this.termsAgreed ? "true" : "false"
+        };
+        
+        console.log('API 요청 데이터:', requestData);
+        
+        // 서버에 회원가입 요청 보내기
+        const response = await axios.post('http://woodzverse.pythonanywhere.com/member/signup/', requestData);
+        
+        console.log('회원가입 성공:', response.data);
+        
+        // Vuex를 통해 인증 정보 저장
+        if (response.data) {
+          this.login({
+            access: response.data.access,
+            refresh: response.data.refresh,
+            user: response.data.user
+          });
+        }
+        
+        this.showAlertMessage('회원가입이 완료되었습니다!', 'success');
+        
+        // 잠시 후 로그인 페이지로 이동
+        setTimeout(() => {
+          this.$router.push({ name: 'SignIn' });
+        }, 1500);
+      } catch (error) {
+        this.isSubmitting = false;
+        
+        console.error('회원가입 오류:', error);
+        
+        if (error.response && error.response.data) {
+          // 서버에서 반환한 오류 메시지 처리
+          const errorData = error.response.data;
+          
+          if (errorData.email) {
+            this.emailError = errorData.email[0];
+            this.showAlertMessage(`이메일 오류: ${errorData.email[0]}`, 'error');
+          } else if (errorData.password1) {
+            this.passwordError = errorData.password1[0];
+            this.showAlertMessage(`비밀번호 오류: ${errorData.password1[0]}`, 'error');
+          } else if (errorData.non_field_errors) {
+            this.showAlertMessage(`오류: ${errorData.non_field_errors[0]}`, 'error');
+          } else {
+            this.showAlertMessage('회원가입 중 오류가 발생했습니다.', 'error');
+          }
+        } else {
+          this.showAlertMessage('서버와 통신 중 오류가 발생했습니다.', 'error');
+        }
+      } finally {
+        this.isSubmitting = false;
       }
     }
-  },
-  mounted() {
-    this.generateBirthYears();
   }
 }
 </script>
@@ -327,25 +403,6 @@ select.input-field {
   cursor: pointer;
 }
 
-.check-button {
-  min-width: 100px;
-  height: 56px;
-  border-radius: 14px;
-  background: linear-gradient(90deg, #c6f264, #8de557);
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(141, 229, 87, 0.2);
-}
-
-.check-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(141, 229, 87, 0.3);
-}
-
 .terms-container {
   display: flex;
   align-items: center;
@@ -392,6 +449,7 @@ select.input-field {
   font-weight: 600;
   text-decoration: none;
   margin-left: 5px;
+  cursor: pointer;
 }
 
 .submit-button {
@@ -407,12 +465,16 @@ select.input-field {
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(141, 229, 87, 0.3);
   margin-bottom: 16px;
-/*   z-index: 1; */
 }
 
-.submit-button:hover {
+.submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 14px rgba(141, 229, 87, 0.4);
+}
+
+.submit-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .login-text {
@@ -425,6 +487,7 @@ select.input-field {
   color: #75cc55;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .wave-decoration {
@@ -435,5 +498,12 @@ select.input-field {
   height: 120px;
   z-index: -1;
   opacity: 0.15;
+}
+
+.error-text {
+  color: #e53935;
+  font-size: 12px;
+  margin-top: 4px;
+  margin-left: 8px;
 }
 </style>
