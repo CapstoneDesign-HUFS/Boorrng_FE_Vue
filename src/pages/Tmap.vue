@@ -19,9 +19,9 @@
 
   <!--속도 출력 테스트-->
 
-  <div class="speed-button" @click="toggleSpeedMeasurement">
+  <!-- <div class="speed-button" @click="toggleSpeedMeasurement">
     <span>{{ speedMeasurement.isActive ? '속도 측정 중지' : '속도 측정 시작' }}</span>
-  </div>
+  </div> -->
 
   <!-- template 섹션에 추가 -->
   <div v-if="showSpeedDisplay" class="speed-display">
@@ -48,6 +48,7 @@ import SearchResultPage from './SearchResultPage.vue';
 import SignalModal from '../components/SignalModal.vue';
 import RouteInfoModal from '@/components/RouteInfoModal.vue';
 import RouteHeader from '@/components/RouteHeader.vue';
+import routeData from '../assets/mocks/route.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
@@ -68,6 +69,7 @@ export default {
       tmapKey: import.meta.env.VITE_APP_TMAP, // .env 파일에서 TMap API 키 가져오기
       tmapApi: null,
       currentLocation: {lat: 37.594453, lon: 127.079074}, // 예지다움 오피스텔
+      //currentLocation: {lat: 37.59445276, lon: 127.07909440}, // 예지다움 오피스텔
 
       isSearched: false, // 검색 여부
 
@@ -75,6 +77,8 @@ export default {
       // 경로 관련
       route: null,
       routeLines: [],
+      // mock 데이터
+      routeData: routeData,
 
 
       // 신호등 관련
@@ -117,6 +121,20 @@ export default {
 
     };
   },
+  watch: {
+    // 스토어의 requestRoute 상태 감시
+    '$store.state.requestRoute': {
+      immediate: true,
+      handler(value) {
+        if (value && this.$store.state.selectedDestination) {
+          console.log('스토어에서 경로 요청 감지');
+          this.showRoute(this.$store.state.selectedDestination);
+          // 플래그 초기화
+          this.$store.commit('clearRouteRequest');
+        }
+      }
+    }
+  },
   created(){
     this.$store.commit('setNavMenu', 1); // BottomNav 설정
     this.tmapApi = axios.create({
@@ -133,6 +151,12 @@ export default {
       this.initTmap();
     });
     window.addEventListener('resize', this.resizeMap);
+
+/*     const query = this.$route.query;
+    if (query.requestRoute === 'true') {
+      console.log("경로 요청됨");
+      this.showRoute();
+    } */
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.resizeMap);
@@ -208,11 +232,49 @@ export default {
         this.map.resize();
       }
     },
+    // 역지오코딩
+    getAddressFromCoords() {
+      // API 요청을 위한 파라미터 설정
+      const params = {
+        version: 1,
+        lat: this.currentLocation.lat,
+        lon: this.currentLocation.lon,
+        coordType: 'WGS84GEO',
+        addressType: 'A10'  // A10: 도로명 주소
+      };
+      
+      // 이미 설정된 tmapApi 인스턴스 사용
+      this.tmapApi.get('/geo/reversegeocoding', { params })
+        .then(response => {
+          // 응답 데이터에서 주소 정보 추출
+          const addressInfo = response.data.addressInfo;
+          
+          // 전체 주소 표시
+          const address = addressInfo.fullAddress;
+          const gugun = addressInfo.gu_gun;
+          const legalDong = addressInfo.legalDong;
+          const bunji = addressInfo.bunji;
+          const addressName = `${gugun} ${legalDong} ${bunji}`;
+          const departure = {
+            name: addressName,
+            lat: this.currentLocation.lat,
+            lon: this.currentLocation.lon,
+          }
+          this.$store.commit('setCurrentDeparture', departure);
+          
+          console.log('현재 주소 정보 가져오기 성공:', address);
+        })
+        .catch(error => {
+          console.error('주소 정보 가져오기 실패:', error);
+        });
+    },
     // 검색 처리 메소드 추가
     async handleSearch(query) {
       console.log('검색어:', query);
       this.isSearched = true; // 검색 결과 페이지 표시
       console.log('검색 완료? ', this.isSearched);
+
+      this.getAddressFromCoords(); // 역지오코딩 호출
 
       // 여기에 T Map API를 사용한 검색 및 결과 처리 로직 구현
       // 예: POI 검색, 경로 검색 등
@@ -409,10 +471,12 @@ export default {
         this.markerPoints = [];
         
         // 경로 데이터를 가져옴 (로컬 파일이나 서버에서)
-        const response = await this.tmapApi.get('http://localhost:3000/tmap_raw');
-        console.log("경로 정보:", response.data.features);
+        // const response = await this.tmapApi.get('http://localhost:3000/tmap_raw'); // 로컬 서버
+        const response = this.routeData.routes.tmap_raw; // mock 데이터
+        // console.log("경로 정보:", response.data.features); // 로컬 서버 버전
         
-        const features = response.data.features;
+        //const features = response.data.features; // 로컬 서버 버전
+        const features = response.features;
         
         // 경로의 시작점과 끝점 좌표를 저장할 변수
         let startPoint, endPoint;

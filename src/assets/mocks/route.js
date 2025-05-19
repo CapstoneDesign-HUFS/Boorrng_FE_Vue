@@ -1,0 +1,421 @@
+const route = {
+        "routes": 
+            {
+                "route_type": "recommended",
+                "total_distance_m": 0,
+                "total_time_sec": 0,
+                "speed_used": 1.0,
+                "total_segments": 3,
+                "segments": [
+                    {
+                        "segment_number": 1,
+                        "distance_m": 0,
+                        "estimated_time_sec": 0,
+                        "start": {
+                            "lat": 37.594531013087924,
+                            "lng": 127.07904162053583
+                        },
+                        "end": {
+                            "lat": 37.59475322629914,
+                            "lng": 127.07997486251902
+                        },
+                        "speed_used": 1.0,
+                        "traffic_light": {
+                            "lat": 37.5950098,
+                            "lng": 127.0803091,
+                            "name": "동일로지하차도"
+                        }
+                    },
+                    {
+                        "segment_number": 2,
+                        "distance_m": 0,
+                        "estimated_time_sec": 0,
+                        "start": {
+                            "lat": 37.59475322629914,
+                            "lng": 127.07997486251902
+                        },
+                        "end": {
+                            "lat": 37.595689292527936,
+                            "lng": 127.08352173494954
+                        },
+                        "speed_used": 1.0,
+                        "traffic_light": {
+                            "lat": 37.5958166,
+                            "lng": 127.0834891,
+                            "name": "서울중랑우체국"
+                        }
+                    },
+                    {
+                        "segment_number": 3,
+                        "distance_m": 0,
+                        "estimated_time_sec": 0,
+                        "start": {
+                            "lat": 37.595689292527936,
+                            "lng": 127.08352173494954
+                        },
+                        "end": {
+                            "lat": 37.596319798463604,
+                            "lng": 127.08483548619215
+                        },
+                        "speed_used": 1.0,
+                        "traffic_light": null
+                    }
+                ],
+                "tmap_raw": {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [
+                                    127.07904162053583,
+                                    37.594531013087924
+                                ]
+                            },
+                            "properties": {
+                                "totalDistance": 581,
+                                "totalTime": 470,
+                                "index": 0,
+                                "pointIndex": 0,
+                                "name": "",
+                                "description": "망우로 을 따라 86m 이동",
+                                "direction": "",
+                                "nearPoiName": "",
+                                "nearPoiX": "0.0",
+                                "nearPoiY": "0.0",
+                                "intersectionName": "",
+                                "facilityType": "11",
+                                "facilityName": "",
+                                "turnType": 200,
+                                "pointType": "SP"
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    [
+                                        127.07904162053583,
+                                        37.594531013087924
+                                    ],
+                                    [
+                                        127.07911383562528,
+                                        37.59455045657362
+                                    ],
+                                    [
+                                        127.0793804761806,
+                                        37.59461434284174
+                                    ],
+                                    [
+                                        127.07993042228148,
+                                        37.59474767058826
+                                    ],
+                                    [
+                                        127.07997486251902,
+                                        37.59475322629914
+                                    ]
+                                ]
+                            },
+                            "properties": {
+                                "index": 1,
+                                "lineIndex": 0,
+                                "name": "망우로",
+                                "description": "망우로, 86m",
+                                "distance": 86,
+                                "time": 91,
+                                "roadType": 21,
+                                "categoryRoadType": 0,
+                                "facilityType": "11",
+                                "facilityName": ""
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [
+                                    127.07997486251902,
+                                    37.59475322629914
+                                ]
+                            },
+                            "properties": {
+                                "index": 2,
+                                "pointIndex": 1,
+                                "name": "",
+                                "description": "횡단보도 후 보행자도로 을 따라 50m 이동 ",
+                                "direction": "",
+                                "nearPoiName": "",
+                                "nearPoiX": "0.0",
+                                "nearPoiY": "0.0",
+                                "intersectionName": "동일로지하차도앞",
+                                "facilityType": "15",
+                                "facilityName": "",
+                                "turnType": 211,
+                                "pointType": "GP"
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    [
+                                        127.07997486251902,
+                                        37.59475322629914
+                                    ],
+                                    [
+                                        127.08051369875824,
+                                        37.59487822148119
+                                    ]
+                                ]
+                            },
+                            "properties": {
+                                "index": 3,
+                                "lineIndex": 1,
+                                "name": "보행자도로",
+                                "description": "보행자도로, 50m",
+                                "distance": 50,
+                                "time": 33,
+                                "roadType": 21,
+                                "categoryRoadType": 0,
+                                "facilityType": "15",
+                                "facilityName": ""
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [
+                                    127.08051369875824,
+                                    37.59487822148119
+                                ]
+                            },
+                            "properties": {
+                                "index": 4,
+                                "pointIndex": 2,
+                                "name": "스탠다드차타드은행 중랑교지점",
+                                "description": "스탠다드차타드은행 중랑교지점 에서 직진 후 망우로 을 따라 282m 이동 ",
+                                "direction": "",
+                                "nearPoiName": "스탠다드차타드은행 중랑교지점",
+                                "nearPoiX": "0.0",
+                                "nearPoiY": "0.0",
+                                "intersectionName": "동일로지하차도앞",
+                                "facilityType": "11",
+                                "facilityName": "",
+                                "turnType": 11,
+                                "pointType": "GP"
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    [
+                                        127.08051369875824,
+                                        37.59487822148119
+                                    ],
+                                    [
+                                        127.08054425058121,
+                                        37.5949115514899
+                                    ],
+                                    [
+                                        127.08057202527489,
+                                        37.59493099417442
+                                    ],
+                                    [
+                                        127.080666460404,
+                                        37.59495599297049
+                                    ],
+                                    [
+                                        127.08133861719767,
+                                        37.5951032101953
+                                    ],
+                                    [
+                                        127.08203021571533,
+                                        37.59528375722892
+                                    ],
+                                    [
+                                        127.08270792684657,
+                                        37.5954559716481
+                                    ],
+                                    [
+                                        127.08329953534378,
+                                        37.59560596487646
+                                    ],
+                                    [
+                                        127.08352173494954,
+                                        37.595689292527936
+                                    ]
+                                ]
+                            },
+                            "properties": {
+                                "index": 5,
+                                "lineIndex": 2,
+                                "name": "망우로",
+                                "description": "망우로, 282m",
+                                "distance": 282,
+                                "time": 231,
+                                "roadType": 21,
+                                "categoryRoadType": 0,
+                                "facilityType": "11",
+                                "facilityName": ""
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [
+                                    127.08352173494954,
+                                    37.595689292527936
+                                ]
+                            },
+                            "properties": {
+                                "index": 6,
+                                "pointIndex": 3,
+                                "name": "",
+                                "description": "좌측 횡단보도 후 보행자도로 을 따라 31m 이동 ",
+                                "direction": "",
+                                "nearPoiName": "",
+                                "nearPoiX": "0.0",
+                                "nearPoiY": "0.0",
+                                "intersectionName": "",
+                                "facilityType": "15",
+                                "facilityName": "",
+                                "turnType": 212,
+                                "pointType": "GP"
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    [
+                                        127.08352173494954,
+                                        37.595689292527936
+                                    ],
+                                    [
+                                        127.08348840227951,
+                                        37.595772615571505
+                                    ],
+                                    [
+                                        127.0834550696886,
+                                        37.59585316116024
+                                    ],
+                                    [
+                                        127.08341340389062,
+                                        37.59595592623726
+                                    ]
+                                ]
+                            },
+                            "properties": {
+                                "index": 7,
+                                "lineIndex": 3,
+                                "name": "보행자도로",
+                                "description": "보행자도로, 31m",
+                                "distance": 31,
+                                "time": 21,
+                                "roadType": 21,
+                                "categoryRoadType": 0,
+                                "facilityType": "15",
+                                "facilityName": ""
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [
+                                    127.08341340389062,
+                                    37.59595592623726
+                                ]
+                            },
+                            "properties": {
+                                "index": 8,
+                                "pointIndex": 4,
+                                "name": "에이스침대 상봉점",
+                                "description": "에이스침대 상봉점 에서 우회전 후 망우로 을 따라 132m 이동 ",
+                                "direction": "",
+                                "nearPoiName": "에이스침대 상봉점",
+                                "nearPoiX": "0.0",
+                                "nearPoiY": "0.0",
+                                "intersectionName": "",
+                                "facilityType": "11",
+                                "facilityName": "",
+                                "turnType": 13,
+                                "pointType": "GP"
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    [
+                                        127.08341340389062,
+                                        37.59595592623726
+                                    ],
+                                    [
+                                        127.08369670911954,
+                                        37.59603647753584
+                                    ],
+                                    [
+                                        127.08399667941774,
+                                        37.59611980658985
+                                    ],
+                                    [
+                                        127.08483548619215,
+                                        37.596319798463604
+                                    ]
+                                ]
+                            },
+                            "properties": {
+                                "index": 9,
+                                "lineIndex": 4,
+                                "name": "망우로",
+                                "description": "망우로, 132m",
+                                "distance": 132,
+                                "time": 94,
+                                "roadType": 21,
+                                "categoryRoadType": 0,
+                                "facilityType": "11",
+                                "facilityName": ""
+                            }
+                        },
+                        {
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [
+                                    127.08483548619215,
+                                    37.596319798463604
+                                ]
+                            },
+                            "properties": {
+                                "index": 10,
+                                "pointIndex": 5,
+                                "name": "도착지",
+                                "description": "도착",
+                                "direction": "",
+                                "nearPoiName": "도착지",
+                                "nearPoiX": "0.0",
+                                "nearPoiY": "0.0",
+                                "intersectionName": "상봉역6번출구",
+                                "facilityType": "",
+                                "facilityName": "",
+                                "turnType": 201,
+                                "pointType": "EP"
+                            }
+                        }
+                    ]
+                }
+            }
+        
+}
+
+export default route;

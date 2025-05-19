@@ -18,7 +18,8 @@
         <DestinationSearchItem
             v-for="(result, index) in searchResults"
             :key="index"
-            :result="result" />
+            :result="result" 
+            @getDestination="getDestination"/>
       </div>
     </div>
   </template>
@@ -37,6 +38,20 @@
       goBack() {
         this.$store.commit('setHomePageState', true); 
         this.$router.push('/home');
+      },
+      getDestination(destination){
+        console.log("getDestination() 호출됨", destination);
+        this.$store.commit('setSelectedDestination', {
+          name: destination.name,
+          lat: destination.lat,
+          lon: destination.lon,
+        });
+        this.$router.push({
+          path: '/home',
+          query: {
+            requestRoute: 'true',
+          }
+        });
       }
     },
 

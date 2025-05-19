@@ -15,6 +15,7 @@
       </div>
 </template>
 <script>
+import axios from 'axios';
 export default{
   name: 'DestinationSearchItem',
   props: {
@@ -31,6 +32,8 @@ export default{
 
       // 경로 탐색 구현해야 함
       console.log("getRoute() 호출됨", this.$store.state.selectedDestination);
+      this.$store.commit('setRequestRoute', true);
+      this.$router.push('/home')
     }
   }
 }

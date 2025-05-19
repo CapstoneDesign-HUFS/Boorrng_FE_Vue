@@ -1,9 +1,9 @@
 <template>
     <div class="route-header">
       <div class="route-info">
-        <span class="start-location">한국외대</span>
+        <span class="start-location">{{ startLocation }}</span>
         <span class="arrow">→</span>
-        <span class="end-location">김밥천국ㄴ</span>
+        <span class="end-location">{{endLocation}}</span>
       </div>
       <button class="close-button" @click="close">
         <span>×</span>
@@ -12,18 +12,27 @@
   </template>
   
   <script>
+  import { mapState } from 'vuex';
   export default {
     name: 'RouteHeader',
-    props: {
+    computed: {
+      startLocation() {
+        return this.$store.state.currentDeparture.name;
+      },
+      endLocation() {
+        return this.$store.state.selectedDestination.name;
+      }
+    },
+    /* props: {
       startLocation: {
         type: String,
-        default: '한국외대'
+        default: '예지다움 오피스텔'
       },
       endLocation: {
         type: String,
-        default: '김밥천국'
+        default: 'SC제일은행 상봉역지점'
       }
-    },
+    }, */
     methods: {
       close() {
         this.$emit('close');

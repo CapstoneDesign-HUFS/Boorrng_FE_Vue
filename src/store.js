@@ -11,9 +11,14 @@ const store = createStore({
                 name: '',
                 lat: 0,
                 lng: 0,
-                distance: 0,
             },
+            requestRoute: false,
             homePageState: true, 
+            currentDeparture: {
+                name: '',
+                lat: 0,
+                lng: 0,
+            }
         }
     },
     mutations: {
@@ -34,7 +39,16 @@ const store = createStore({
         },
         setSearchCount(state, count) {
             state.searchCount = count;
-        }
+        },
+        setRequestRoute(state, request) {
+            state.requestRoute = request;
+        },
+        clearRouteRequest(state) {
+            state.requestRoute = false;
+        },
+        setCurrentDeparture(state, departure) {
+            state.currentDeparture = departure;
+        },
     },
 })
 export default store;
