@@ -9,9 +9,9 @@
   </div>
   <SearchBox v-if="showSearchBox===true" @search="handleSearch" />
   <LocationButton v-if="showLocationButton===true" @locate="handleLocationClick" />
-    <div class="route-test-button" @click="showRoute">
+    <!-- <div class="route-test-button" @click="showRoute">
     <span>경로 테스트</span>
-  </div>
+  </div> -->
 
 <!--   <div class="light-test-button" @click="showSignal">
     <span>신호등 정보</span>
@@ -39,6 +39,38 @@
   
   <RouteInfoModal v-if="showRouteInfoModal" @startGuidance="startGuidance"/>
   <RouteHeader v-if="showRouteHeader" @close="endGuidance"/>
+
+
+
+  <!-- 속도 표시 수정 -->
+  <!-- <div v-if="showSpeedDisplay" class="speed-display" :class="optimizationClass">
+    <div class="speed-value">{{ speedMeasurement.displaySpeedKmh }}</div>
+    <div class="speed-unit">km/h</div>
+  </div> -->
+
+  <!-- 추천 보행 속도 안내 UI -->
+  <div v-if="showSpeedDisplay && nextTrafficLight" class="speed-guidance" :class="optimizationClass">
+    <div class="speed-guidance-header">최적 보행 속도 안내</div>
+    <div class="speed-recommendation">
+      {{ (recommendedSpeed * 3.6).toFixed(1) }} km/h
+    </div>
+    <div class="speed-guidance-message">
+      {{ speedGuidanceMessage }}
+    </div>
+  </div>
+
+  <!-- 시뮬레이션 속도 조절 버튼 -->
+  <!-- <div v-if="simulationActive" class="simulation-controls">
+    <button class="simulation-button" @click="changeSimulationSpeed(1)">
+      1x 속도
+    </button>
+    <button class="simulation-button" @click="changeSimulationSpeed(2)">
+      2x 속도
+    </button>
+    <button class="simulation-button" @click="changeSimulationSpeed(5)">
+      5x 속도
+    </button>
+  </div> -->
 </template>
 
 <script>
@@ -51,6 +83,11 @@ import RouteHeader from '@/components/RouteHeader.vue';
 import routeData from '../assets/mocks/route.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
+
+
+import pedestrianSimulationData from '../assets/mocks/pedestrianSimulationData.js';
+import { installGeolocationMock } from '../assets/mocks/geolocationMock.js';
+import trafficLightSimulator from '../assets/mocks/trafficLightSimulator.js';
 
 export default {
   name: 'TMap',
@@ -118,6 +155,19 @@ export default {
       showSpeedDisplay: false,
       speedBuffer: [], // 최근 속도 값을 저장할 배열
       speedBufferSize: 5, // 평균에 사용할 값의 개수 (더 큰 값 = 더 부드러운 변화)
+
+
+
+      // 시뮬레이션 관련 속성들
+      simulationActive: false,
+      simulationInterval: null,
+      simulationSpeedMultiplier: 1.0,
+      nextTrafficLight: null,
+      distanceToNextTrafficLight: 0,
+      recommendedSpeed: 1.2,
+      speedGuidanceMessage: '',
+      speedGuidanceCaseType: '',
+      optimizationClass: 'optimization-good',
 
     };
   },
@@ -591,6 +641,248 @@ export default {
     },
 
     // 4. 경로 안내 시작
+    // 시뮬레이션 초기화
+    initSimulation() {
+      // geolocationMock 설치 (navigator.geolocation 대체하지 않음)
+      this.geolocationMock = installGeolocationMock();
+      
+      // 시뮬레이션 시간 배속 설정
+      trafficLightSimulator.setSpeedMultiplier(this.simulationSpeedMultiplier);
+      this.geolocationMock.setSpeedMultiplier(this.simulationSpeedMultiplier);
+      
+      // 중요: 시뮬레이션 시간을 0으로 리셋 (시작 시간 오프셋 조정)
+      if (typeof this.geolocationMock.timeOffset !== 'undefined') {
+        this.geolocationMock.timeOffset = 0;
+      }
+      if (typeof trafficLightSimulator.timeOffset !== 'undefined') {
+        trafficLightSimulator.timeOffset = 0;
+      }
+      
+      // 시뮬레이션 시간과 데이터의 시작 시간 동기화
+      this.geolocationMock.restart();
+      trafficLightSimulator.restart();
+      
+      // 초기 위치 설정 (시뮬레이션 데이터의 첫 위치)
+      if (pedestrianSimulationData.positionData.length > 0) {
+        const initialPosition = pedestrianSimulationData.positionData[0];
+        this.currentLocation.lat = initialPosition.lat;
+        this.currentLocation.lon = initialPosition.lng;
+        
+        // 지도 초기 위치 설정
+        if (this.map) {
+          this.map.setCenter(new Tmapv3.LatLng(initialPosition.lat, initialPosition.lng));
+          this.createGpsMarker(initialPosition.lat, initialPosition.lng);
+        }
+        
+        console.log('시뮬레이션 초기 위치:', initialPosition);
+        console.log('시뮬레이션 데이터 범위:', 
+          pedestrianSimulationData.positionData[0].timestamp, 
+          'to', 
+          pedestrianSimulationData.positionData[pedestrianSimulationData.positionData.length-1].timestamp);
+      }
+      
+      console.log('시뮬레이션 초기화 완료');
+    },
+    
+    // 시뮬레이션 시작
+    startSimulation() {
+      if (this.simulationActive) return;
+      
+      console.log('보행 시뮬레이션 시작');
+      this.simulationActive = true;
+      
+      // 기존 속도 측정 시작 (필요한 경우)
+      this.startSpeedMeasurement();
+      
+      // 시뮬레이션 업데이트 간격 (밀리초)
+      const updateInterval = 500;
+      
+      // 시뮬레이션 타이머 설정
+      this.simulationInterval = setInterval(() => {
+        this.updateSimulation();
+      }, updateInterval);
+      
+      // 시뮬레이션 속도 표시 활성화
+      this.showSpeedDisplay = true;
+    },
+    
+    // 시뮬레이션 업데이트
+    updateSimulation() {
+      // 현재 시뮬레이션 시간 가져오기
+      const simulationTime = trafficLightSimulator.getCurrentSimulationTime();
+      
+      console.log('현재 시뮬레이션 시간:', simulationTime);
+      
+      // 현재 시간에 해당하는 위치 찾기 (pedestrianSimulationData에서)
+      let currentPosition = null;
+      
+      // 시뮬레이션 시간에 해당하는 위치 찾기
+      for (let i = 0; i < pedestrianSimulationData.positionData.length - 1; i++) {
+        const pos1 = pedestrianSimulationData.positionData[i];
+        const pos2 = pedestrianSimulationData.positionData[i + 1];
+        
+        if (simulationTime >= pos1.timestamp && simulationTime <= pos2.timestamp) {
+          // 두 위치 사이에서 보간
+          const ratio = (simulationTime - pos1.timestamp) / (pos2.timestamp - pos1.timestamp);
+          currentPosition = {
+            lat: pos1.lat + (pos2.lat - pos1.lat) * ratio,
+            lon: pos1.lng + (pos2.lng - pos1.lng) * ratio
+          };
+          break;
+        }
+      }
+      
+      // 위치를 찾지 못한 경우
+      if (!currentPosition) {
+        const lastPosition = pedestrianSimulationData.positionData[pedestrianSimulationData.positionData.length - 1];
+        
+        // 마지막 위치의 타임스탬프 출력
+        console.log('마지막 위치 타임스탬프:', lastPosition.timestamp);
+        
+        // 시뮬레이션 시간이 마지막 타임스탬프보다 크면 시뮬레이션 완료
+        if (simulationTime > lastPosition.timestamp) {
+          console.log('시뮬레이션 완료 - 마지막 위치에 도달');
+          this.stopSimulation();
+          return;
+        }
+        
+        // 시뮬레이션 시간이 첫 타임스탬프보다 작으면 첫 위치 사용
+        const firstPosition = pedestrianSimulationData.positionData[0];
+        if (simulationTime < firstPosition.timestamp) {
+          console.log('시뮬레이션 시간이 첫 위치보다 이전 - 첫 위치 사용');
+          currentPosition = {
+            lat: firstPosition.lat,
+            lon: firstPosition.lng
+          };
+        } else {
+          // 그 외의 경우는 마지막 위치 사용
+          currentPosition = {
+            lat: lastPosition.lat,
+            lon: lastPosition.lng
+          };
+        }
+      }
+      
+      // 현재 위치 업데이트
+      this.currentLocation = currentPosition;
+      
+      // 지도 위치 업데이트
+      if (this.map) {
+        this.map.setCenter(new Tmapv3.LatLng(currentPosition.lat, currentPosition.lon));
+        this.createGpsMarker(currentPosition.lat, currentPosition.lon);
+      }
+      
+      // 다음 신호등 찾기
+      this.findNextTrafficLight(simulationTime);
+      
+      // 최적 보행 속도 계산
+      this.calculateOptimalWalkingSpeed(simulationTime);
+      
+      // 속도 표시 업데이트
+      if (this.speedMeasurement && this.speedMeasurement.displaySpeedKmh) {
+        // 시뮬레이션 속도로 덮어쓰기
+        const walkingSpeed = (this.recommendedSpeed * 3.6).toFixed(1); // m/s를 km/h로 변환
+        this.speedMeasurement.displaySpeedKmh = walkingSpeed;
+      }
+    },
+    
+    // 다음 신호등 찾기
+    findNextTrafficLight(simulationTime) {
+      // 현재 위치에 가장 가까운 신호등 찾기
+      let closestTrafficLight = null;
+      let minDistance = Infinity;
+      
+      // pedestrianSimulationData.route의 모든 세그먼트에 대해
+      for (const segment of pedestrianSimulationData.route) {
+        if (segment.trafficLight) {
+          const tlPos = segment.trafficLight.position;
+          const distance = this.calculateDistance(
+            this.currentLocation.lat, 
+            this.currentLocation.lon, 
+            tlPos.lat, 
+            tlPos.lng
+          );
+          
+          // 이미 지나간 신호등은 제외 (거리가 점점 멀어지는 경우)
+          if (distance < minDistance && distance > 5) { // 5m보다 가까우면 이미 지나간 것으로 간주
+            minDistance = distance;
+            closestTrafficLight = segment.trafficLight;
+          }
+        }
+      }
+      
+      this.nextTrafficLight = closestTrafficLight;
+      this.distanceToNextTrafficLight = minDistance;
+    },
+    
+    // 최적 보행 속도 계산
+    calculateOptimalWalkingSpeed(simulationTime) {
+      if (!this.nextTrafficLight || this.distanceToNextTrafficLight === Infinity) {
+        this.recommendedSpeed = 1.2; // 기본 보행 속도
+        this.speedGuidanceMessage = '다음 신호등이 없습니다.';
+        this.speedGuidanceCaseType = '없음';
+        this.optimizationClass = 'optimization-good';
+        return;
+      }
+      
+      // trafficLightSimulator를 사용하여 최적 보행 속도 계산
+      const result = trafficLightSimulator.calculateOptimalSpeed(
+        this.currentLocation,
+        { id: this.nextTrafficLight.name || 'TL001' }, // ID 설정
+        this.distanceToNextTrafficLight
+      );
+      
+      this.recommendedSpeed = result.recommendedSpeed;
+      this.speedGuidanceMessage = result.message;
+      this.speedGuidanceCaseType = result.caseType;
+      
+      // 케이스에 따라 UI 스타일 변경
+      switch (result.caseType) {
+        case '케이스1':
+          this.optimizationClass = 'optimization-good';
+          break;
+        case '케이스2':
+          this.optimizationClass = 'optimization-caution';
+          break;
+        case '케이스3':
+          this.optimizationClass = 'optimization-warning';
+          break;
+        case '케이스4':
+          this.optimizationClass = 'optimization-bad';
+          break;
+        default:
+          this.optimizationClass = 'optimization-good';
+      }
+    },
+    
+    // 시뮬레이션 중지
+    stopSimulation() {
+      if (!this.simulationActive) return;
+      
+      console.log('보행 시뮬레이션 중지');
+      
+      if (this.simulationInterval) {
+        clearInterval(this.simulationInterval);
+        this.simulationInterval = null;
+      }
+      
+      this.simulationActive = false;
+      
+      // 속도 측정 중지 (필요한 경우)
+      this.stopSpeedMeasurement();
+      
+      // 시뮬레이션 속도 표시 숨기기
+      this.showSpeedDisplay = false;
+    },
+    
+    // 시뮬레이션 속도 변경
+    changeSimulationSpeed(multiplier) {
+      this.simulationSpeedMultiplier = multiplier;
+      trafficLightSimulator.setSpeedMultiplier(multiplier);
+      this.geolocationMock.setSpeedMultiplier(multiplier);
+      console.log(`시뮬레이션 속도 변경: ${multiplier}x`);
+    },
+
     startGuidance() {
       console.log("경로 안내 시작");
       // 여기에 경로 안내 시작 로직 추가
@@ -599,6 +891,17 @@ export default {
       this.showSearchBox = false;
       this.showLocationButton = false;
       this.$store.commit('setHomePageState', false); // BottomNav 설정
+
+      if (this.gpsMarker) {
+        this.gpsMarker.setMap(null);
+      }
+
+      // 시뮬레이션 초기화 및 시작 추가
+      // this.initSimulation();
+      //this.startSimulation();
+      
+      // 속도 안내 UI 추가
+      //this.showSpeedDisplay = true;
     },
 
     // 5. 경로 안내 종료
@@ -609,6 +912,9 @@ export default {
       this.showSearchBox = true;
       this.showLocationButton = true;
       this.$store.commit('setHomePageState', true); // BottomNav 설정
+
+      // 시뮬레이션 중지 추가
+      this.stopSimulation();
 
       try {
         // 경로 객체 삭제
@@ -626,6 +932,8 @@ export default {
 
     // 6. 실시간 속도 측정 시작
     startSpeedMeasurement() {
+      // 기존 코드 주석 처리 또는 제거
+      /*
       if (this.speedMeasurement.isActive) return;
       
       console.log("보행 속도 측정 시작");
@@ -656,6 +964,22 @@ export default {
       } else {
         alert('이 브라우저는 Geolocation을 지원하지 않습니다.');
       }
+      */
+      
+      // 시뮬레이션 모드에서는 실제 측정 대신 시뮬레이션 데이터 사용
+      if (this.speedMeasurement.isActive) return;
+      
+      console.log("시뮬레이션 보행 속도 측정 시작");
+      this.speedMeasurement.isActive = true;
+      this.speedMeasurement.startTime = new Date();
+      this.speedMeasurement.positions = [];
+      this.speedMeasurement.distance = 0;
+      this.speedMeasurement.currentSpeed = 0;
+      this.speedMeasurement.avgSpeed = 0;
+      this.speedMeasurement.lastPosition = null;
+      this.showSpeedDisplay = true;
+      
+      // 직접적인 위치 업데이트는 updateSimulation에서 처리됨
     },
 
     // 위치 업데이트 핸들러
@@ -774,13 +1098,16 @@ export default {
     // 속도 측정 종료
     stopSpeedMeasurement() {
       if (!this.speedMeasurement.isActive) return;
-      
+  
       console.log("보행 속도 측정 종료");
       
+      // 기존 코드 주석 처리 또는 제거
+      /*
       if (this.watchPositionId !== null) {
         navigator.geolocation.clearWatch(this.watchPositionId);
         this.watchPositionId = null;
       }
+      */
       
       this.speedMeasurement.isActive = false;
       this.showSpeedDisplay = false;
@@ -948,5 +1275,117 @@ export default {
 
 .speed-button:active {
   background-color: #E64A19; /* 클릭 시 더 어두운 색상 */
+}
+
+
+
+
+
+
+
+
+/* 추천 속도 표시 UI */
+.speed-guidance {
+  position: fixed;
+  top: 160px; /* 속도 표시 아래에 위치 */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  font-family: 'Noto Sans KR', sans-serif;
+  z-index: 899;
+  width: 280px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.speed-guidance-header {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.speed-recommendation {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.speed-guidance-message {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #555;
+  margin-top: 8px;
+}
+
+/* 케이스별 최적화 스타일 */
+.optimization-good {
+  border-left: 5px solid #28a745;
+}
+
+.optimization-caution {
+  border-left: 5px solid #ffc107;
+}
+
+.optimization-warning {
+  border-left: 5px solid #fd7e14;
+}
+
+.optimization-bad {
+  border-left: 5px solid #dc3545;
+}
+
+/* 시뮬레이션 컨트롤 UI */
+.simulation-controls {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simulation-button {
+  background-color: #5760E5;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+}
+
+.simulation-button:active {
+  background-color: #4653d0;
+}
+
+/* 속도 표시 수정 - 케이스에 따른 배경색 변경 */
+.speed-display {
+  transition: background-color 0.3s ease;
+}
+
+.speed-display.optimization-good {
+  background-color: rgba(40, 167, 69, 0.8);
+}
+
+.speed-display.optimization-caution {
+  background-color: rgba(255, 193, 7, 0.8);
+}
+
+.speed-display.optimization-warning {
+  background-color: rgba(253, 126, 20, 0.8);
+}
+
+.speed-display.optimization-bad {
+  background-color: rgba(220, 53, 69, 0.8);
 }
 </style>
