@@ -26,6 +26,15 @@ const store = createStore({
             refreshToken: null,
             user: null,
             isAuthenticated: false,
+
+            // 속도 정보
+            userData: {
+                name: '',
+                birthdate: 0,
+                gender: 0,
+                min_speed: 0,
+                max_speed: 0,
+            },
         }
     },
     mutations: {
@@ -55,6 +64,13 @@ const store = createStore({
         },
         setCurrentDeparture(state, departure) {
             state.currentDeparture = departure;
+        },
+        setUserData(state, data) {
+            state.userData.name = data.nickname;
+            state.userData.birthdate = data.birthdate;
+            state.userData.gender = data.gender;
+            state.userData.min_speed = data.min_speed;
+            state.userData.max_speed = data.max_speed;
         },
 
         // 인증 관련
