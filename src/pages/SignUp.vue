@@ -71,7 +71,7 @@
         {{ isSubmitting ? '처리 중...' : '회원가입' }}
       </button>
       
-      <p class="login-text">이미 가입하셨나요? <a @click="login" class="login-link">로그인하기</a></p>
+      <p class="login-text">이미 가입하셨나요? <a @click="navigateToLogin" class="login-link">로그인하기</a></p>
       
       <svg class="wave-decoration" viewBox="0 0 1200 120" preserveAspectRatio="none">
         <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V0C50.75,0,116.21,29.87,181.06,54.47,229.93,74.39,280.09,70.22,321.39,56.44Z" fill="#c6f264"></path>
