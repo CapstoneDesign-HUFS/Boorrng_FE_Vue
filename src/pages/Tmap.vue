@@ -84,6 +84,8 @@ import routeData from '../assets/mocks/route.js';
 import axios from 'axios';
 import dotenv from 'dotenv';
 
+import startImg from '../assets/images/start.png';
+import endImg from '../assets/images/end.png';
 
 import pedestrianSimulationData from '../assets/mocks/pedestrianSimulationData.js';
 import { installGeolocationMock } from '../assets/mocks/geolocationMock.js';
@@ -589,10 +591,12 @@ export default {
             // 마커 이미지 설정
             let markerImg, markerSize;
             if (markerType === "start") {
-              markerImg = "../assets/images/start.png";
+              // markerImg = "../assets/images/start.png";
+              markerImg = startImg;
               markerSize = new Tmapv3.Size(28, 28);
             } else if (markerType === "end") {
-              markerImg = "../assets/images/end.png";
+              //markerImg = "../assets/images/end.png";
+              markerImg = endImg;
               markerSize = new Tmapv3.Size(28, 28);
             } else {
               // 경유지는 작은 원형 마커로 표시
