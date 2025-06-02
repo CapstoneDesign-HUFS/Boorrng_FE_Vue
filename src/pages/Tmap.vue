@@ -24,11 +24,11 @@
   </div> -->
 
   <!-- template 섹션에 추가 -->
-  <div v-if="showSpeedDisplay" class="speed-display">
+  <!-- <div v-if="showSpeedDisplay" class="speed-display">
     <div class="speed-value">{{ speedMeasurement.displaySpeedKmh }}</div>
-    <!-- <div class="speed-unit">km/h</div> -->
+
     <div class="speed-unit">km/h</div>
-  </div>
+  </div> -->
 
 
 
@@ -49,7 +49,7 @@
   </div> -->
 
   <!-- 추천 보행 속도 안내 UI -->
-  <div v-if="showSpeedDisplay && nextTrafficLight" class="speed-guidance" :class="optimizationClass">
+ <!--  <div v-if="showSpeedDisplay && nextTrafficLight" class="speed-guidance" :class="optimizationClass">
     <div class="speed-guidance-header">최적 보행 속도 안내</div>
     <div class="speed-recommendation">
       {{ (recommendedSpeed * 3.6).toFixed(1) }} km/h
@@ -57,7 +57,7 @@
     <div class="speed-guidance-message">
       {{ speedGuidanceMessage }}
     </div>
-  </div>
+  </div> -->
 
   <!-- 시뮬레이션 속도 조절 버튼 -->
   <!-- <div v-if="simulationActive" class="simulation-controls">
@@ -896,16 +896,16 @@ export default {
       this.showLocationButton = false;
       this.$store.commit('setHomePageState', false); // BottomNav 설정
 
-      if (this.gpsMarker) {
+      /* if (this.gpsMarker) {
         this.gpsMarker.setMap(null);
-      }
+      } */
 
       // 시뮬레이션 초기화 및 시작 추가
-      // this.initSimulation();
-      //this.startSimulation();
+      this.initSimulation();
+      this.startSimulation();
       
       // 속도 안내 UI 추가
-      //this.showSpeedDisplay = true;
+      this.showSpeedDisplay = true;
     },
 
     // 5. 경로 안내 종료
