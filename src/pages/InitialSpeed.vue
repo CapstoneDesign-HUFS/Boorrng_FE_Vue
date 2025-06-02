@@ -150,15 +150,17 @@ export default {
     async fetchRecommendedSpeeds() {
       try {
         this.loading = true;
-        const token = this.getAccessToken;
+        //const token = this.getAccessToken;
+        const token = this.$store.getters.getAccessToken; // Vuex에서 토큰 가져오기
+        console.log('토큰:', token);
         
         if (!token) {
           this.showError('로그인이 필요합니다.');
           return;
         }
 
-        // API 경로 수정 (추가 경로 확인)
-        const response = await axios.get('https://woodzverse.pythonanywhere.com/velocity/', {
+        // 추천 속도 API 호출
+        const response = await axios.get('https://woodzverse.pythonanywhere.com/member/velocity/', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
