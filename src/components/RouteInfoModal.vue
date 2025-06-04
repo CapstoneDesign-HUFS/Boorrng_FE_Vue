@@ -5,11 +5,11 @@
         <div class="info">
         <div class="info-row">
             <span class="label">예상소요시간</span>
-            <span class="value">25분</span>
+            <span class="value">{{formattedTime}}</span>
         </div>
         <div class="info-row">
             <span class="label">예상이동거리</span>
-            <span class="value">1.2km</span>
+            <span class="value">{{formattedDistance}}</span>
         </div>
         </div>
         <div class="icon-box" @click="startGuidance">
@@ -31,11 +31,60 @@ export default {
       modalMessage: '',
     };
   },
+  props: {
+    distance: {
+      type: Number, // 또는 적절한 타입
+      required: true
+    },
+    time: {
+      type: Number, // 또는 적절한 타입
+      required: true
+    }
+  },
+  computed: {
+    formattedTime() {
+      if (this.time > 60) {
+        // 60초 이상이면 분 단위로 변환
+        return `약 ${(this.time / 60).toFixed(1)}분`;
+      } else {
+        // 60초 미만이면 초 단위로 표시
+        return `약 1분`;
+      }
+    },
+    formattedDistance() {
+      if (this.distance < 1000) {
+        // 1000 미만이면 미터(m) 단위로 표시
+        return `${Math.round(this.distance)}m`;
+      } else {
+        // 1000 이상이면 킬로미터(km) 단위로 표시하고 소수점 한 자리까지 표현
+        return `${(this.distance / 1000).toFixed(1)}km`;
+      }
+    }
+  },
   methods: {
     startGuidance() {
       console.log('Guidance started');
       this.$emit('startGuidance');
     },
+    
+    format(){
+
+        if (this.adjusted_time > 60){
+          this.adjusted_time = (this.adjusted_time / 60).toFixed(1); // 분 단위로 변환
+          console.log("예측 시간(분):", this.adjusted_time);
+        } else {
+          this.adjusted_time = this.adjusted_time.toFixed(1); // 초 단위로 표시
+          console.log("예측 시간(초):", this.adjusted_time);
+        }
+
+        if (this.total_distance > 1000) {
+          this.total_distance = (this.total_distance / 1000).toFixed(1); // km 단위로 변환
+          console.log("총 거리(km):", this.total_distance);
+        } else {
+          this.total_distance = this.total_distance.toFixed(1); // 미터 단위로 표시
+          console.log("총 거리(m):", this.total_distance);
+        }
+    }
   },
 };
 </script>

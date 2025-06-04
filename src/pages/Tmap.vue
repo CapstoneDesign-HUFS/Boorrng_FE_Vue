@@ -37,7 +37,7 @@
     :intersectionId="selectedIntersection ? selectedIntersection.itst_id : null"
     v-if="this.showSignalModal===true" @closeModal="closeSignalModal" />
   
-  <RouteInfoModal v-if="showRouteInfoModal" @startGuidance="startGuidance"/>
+  <RouteInfoModal v-if="showRouteInfoModal" :distance="total_distance" :time="adjusted_time" @startGuidance="startGuidance"/>
   <RouteHeader v-if="showRouteHeader" @close="endGuidance"/>
 
 
@@ -118,6 +118,8 @@ export default {
       routeLines: [],
       // mock 데이터
       routeData: routeData,
+      total_distance: 0, // 총 거리
+      adjusted_time: 0, // 예측시간
 
 
       // 신호등 관련
@@ -526,6 +528,15 @@ export default {
         // const response = await this.tmapApi.get('http://localhost:3000/tmap_raw'); // 로컬 서버
         const response = this.routeData.routes.tmap_raw; // mock 데이터
         // console.log("경로 정보:", response.data.features); // 로컬 서버 버전
+        console.log("경로 정보:", response.features); // mock 데이터
+
+        const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/estimated-time/?startX=127.079074&startY=37.594453&endX=127.084798&endY=37.596419`
+        const response2 = await axios.get(url);
+        console.log("신호등 예상 시간:", response2.data);
+        this.adjusted_time = response2.data['adjusted_time_sec'];
+        this.total_distance = response2.data['total_distance_m']; // 총 거리
+        console.log("총 거리:", this.total_distance, "미터");
+        console.log("예측 시간:", this.adjusted_time, "초"); 
         
         //const features = response.data.features; // 로컬 서버 버전
         const features = response.features;
