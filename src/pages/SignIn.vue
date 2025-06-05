@@ -116,7 +116,7 @@ export default {
               console.log('로그인 시도:', requestData);
               
               // 로그인 API 호출
-              const loginResponse = await axios.post('http://woodzverse.pythonanywhere.com/member/login/', requestData);
+              const loginResponse = await axios.post('https://woodzverse.pythonanywhere.com/member/login/', requestData);
               
               console.log('로그인 성공:', loginResponse.data);
               

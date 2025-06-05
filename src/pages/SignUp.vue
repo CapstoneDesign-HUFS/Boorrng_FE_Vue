@@ -213,7 +213,7 @@ export default {
         console.log('API 요청 데이터:', requestData);
         
         // 서버에 회원가입 요청 보내기
-        const response = await axios.post('http://woodzverse.pythonanywhere.com/member/signup/', requestData);
+        const response = await axios.post('https://woodzverse.pythonanywhere.com/member/signup/', requestData);
         
         console.log('회원가입 성공:', response.data);
         
