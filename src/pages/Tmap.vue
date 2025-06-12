@@ -525,16 +525,39 @@ export default {
         this.markerPoints = [];
         
         // 경로 데이터를 가져옴 (로컬 파일이나 서버에서)
+        let response = null;
+        let response2 = null;
+
         // const response = await this.tmapApi.get('http://localhost:3000/tmap_raw'); // 로컬 서버
-        const response = this.routeData.routes.tmap_raw; // mock 데이터
+        /* if (this.$store.state.selectedDestination.name === 'SC제일은행 상봉역지점2') {
+          console.log("목적지ㄴㄹㄹㅇㄴ: ", this.$store.state.selectedDestination);
+        } else {
+          console.log("목적지ㄴㅇㅁㄹㅁ: 어쩔티비");
+        } */
+        if (this.$store.state.selectedDestination.name === 'SC제일은행 상봉역지점') {
+          response = this.routeData.routes.tmap_raw; // mock 데이터
+          const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/estimated-time/?startX=127.079074&startY=37.594453&endX=127.084798&endY=37.596419`;
+          response2 = await axios.get(url);
+          console.log("신호등 예상 시간:", response2.data);
+          this.adjusted_time = response2.data['adjusted_time_sec'];
+          this.total_distance = response2.data['total_distance_m']; // 총 거리
+        } else {
+          const dest = this.$store.state.selectedDestination;
+          const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/tmap-segmented-route/?startX=127.07907&startY=37.594453&endX=${dest.lon}&endY=${dest.lat}`;
+          const tempResponse = await axios.get(url);
+          console.log("경로 요청 응답~~~~~:", tempResponse.data);
+          response = tempResponse.data.routes[0].tmap_raw; 
+          console.log("tmap_raw:", response);
+          response2 = tempResponse.data.routes[0];
+          this.adjusted_time = response2.total_time_sec;
+          this.total_distance = response2.total_distance_m;
+        }
+        console.log("목적지: ", this.$store.state.selectedDestination);
+        
+        
         // console.log("경로 정보:", response.data.features); // 로컬 서버 버전
         console.log("경로 정보:", response.features); // mock 데이터
 
-        const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/estimated-time/?startX=127.079074&startY=37.594453&endX=127.084798&endY=37.596419`
-        const response2 = await axios.get(url);
-        console.log("신호등 예상 시간:", response2.data);
-        this.adjusted_time = response2.data['adjusted_time_sec'];
-        this.total_distance = response2.data['total_distance_m']; // 총 거리
         console.log("총 거리:", this.total_distance, "미터");
         console.log("예측 시간:", this.adjusted_time, "초"); 
         
