@@ -515,141 +515,149 @@ export default {
       try {
         // 기존 경로 객체가 있다면 삭제
         if (this.routeLines && this.routeLines.length > 0) {
-          this.routeLines.forEach(line => line.setMap(null));
+          this.routeLines.forEach(line => {
+            if (line && typeof line.setMap === 'function') {
+              line.setMap(null);
+            }
+          });
         }
         if (this.markerPoints && this.markerPoints.length > 0) {
-          this.markerPoints.forEach(marker => marker.setMap(null));
-        }
+          this.markerPoints.forEach(marker => {
+            if (marker && typeof marker.setMap === 'function') {
+              marker.setMap(null);
+            }
+          });
+      }
         
-        this.routeLines = [];
-        this.markerPoints = [];
-        
-        // 경로 데이터를 가져옴 (로컬 파일이나 서버에서)
-        let response = null;
-        let response2 = null;
+      this.routeLines = [];
+      this.markerPoints = [];
+      
+      // 경로 데이터를 가져옴 (로컬 파일이나 서버에서)
+      let response = null;
+      let response2 = null;
 
-        // const response = await this.tmapApi.get('http://localhost:3000/tmap_raw'); // 로컬 서버
-        /* if (this.$store.state.selectedDestination.name === 'SC제일은행 상봉역지점2') {
-          console.log("목적지ㄴㄹㄹㅇㄴ: ", this.$store.state.selectedDestination);
-        } else {
-          console.log("목적지ㄴㅇㅁㄹㅁ: 어쩔티비");
+      // const response = await this.tmapApi.get('http://localhost:3000/tmap_raw'); // 로컬 서버
+      /* if (this.$store.state.selectedDestination.name === 'SC제일은행 상봉역지점2') {
+        console.log("목적지ㄴㄹㄹㅇㄴ: ", this.$store.state.selectedDestination);
+      } else {
+        console.log("목적지ㄴㅇㅁㄹㅁ: 어쩔티비");
+      } */
+      if (this.$store.state.selectedDestination.name === 'SC제일은행 상봉역지점') {
+        response = this.routeData.routes.tmap_raw; // mock 데이터
+        const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/estimated-time/?startX=127.079074&startY=37.594453&endX=127.084798&endY=37.596419`;
+        response2 = await axios.get(url);
+        console.log("신호등 예상 시간:", response2.data);
+        this.adjusted_time = response2.data['adjusted_time_sec'];
+        this.total_distance = response2.data['total_distance_m']; // 총 거리
+      } else {
+        const dest = this.$store.state.selectedDestination;
+        const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/tmap-segmented-route/?startX=127.07907&startY=37.594453&endX=${dest.lon}&endY=${dest.lat}`;
+        const tempResponse = await axios.get(url);
+        console.log("경로 요청 응답~~~~~:", tempResponse.data);
+        response = tempResponse.data.routes[0].tmap_raw; 
+        console.log("tmap_raw:", response);
+        response2 = tempResponse.data.routes[0];
+        this.adjusted_time = response2.total_time_sec;
+        this.total_distance = response2.total_distance_m;
+      }
+      console.log("목적지: ", this.$store.state.selectedDestination);
+      
+      
+      // console.log("경로 정보:", response.data.features); // 로컬 서버 버전
+      console.log("경로 정보:", response.features); // mock 데이터
+
+      console.log("총 거리:", this.total_distance, "미터");
+      console.log("예측 시간:", this.adjusted_time, "초"); 
+      
+      //const features = response.data.features; // 로컬 서버 버전
+      const features = response.features;
+      
+      // 경로의 시작점과 끝점 좌표를 저장할 변수
+      let startPoint, endPoint;
+      
+      // 경로 데이터 처리
+      for (let i = 0; i < features.length; i++) {
+        const feature = features[i];
+        
+        /* if (feature.geometry.type === "LineString"){
+          const coordinates = feature.geometry.coordinates;
+          coordinates.forEach(coord => {
+            console.log(i + " 구간 좌표:", coord[0], coord[1]);
+          });
         } */
-        if (this.$store.state.selectedDestination.name === 'SC제일은행 상봉역지점') {
-          response = this.routeData.routes.tmap_raw; // mock 데이터
-          const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/estimated-time/?startX=127.079074&startY=37.594453&endX=127.084798&endY=37.596419`;
-          response2 = await axios.get(url);
-          console.log("신호등 예상 시간:", response2.data);
-          this.adjusted_time = response2.data['adjusted_time_sec'];
-          this.total_distance = response2.data['total_distance_m']; // 총 거리
-        } else {
-          const dest = this.$store.state.selectedDestination;
-          const url = `https://woodzverse.pythonanywhere.com/map/traffic-lights/tmap-segmented-route/?startX=127.07907&startY=37.594453&endX=${dest.lon}&endY=${dest.lat}`;
-          const tempResponse = await axios.get(url);
-          console.log("경로 요청 응답~~~~~:", tempResponse.data);
-          response = tempResponse.data.routes[0].tmap_raw; 
-          console.log("tmap_raw:", response);
-          response2 = tempResponse.data.routes[0];
-          this.adjusted_time = response2.total_time_sec;
-          this.total_distance = response2.total_distance_m;
-        }
-        console.log("목적지: ", this.$store.state.selectedDestination);
-        
-        
-        // console.log("경로 정보:", response.data.features); // 로컬 서버 버전
-        console.log("경로 정보:", response.features); // mock 데이터
 
-        console.log("총 거리:", this.total_distance, "미터");
-        console.log("예측 시간:", this.adjusted_time, "초"); 
-        
-        //const features = response.data.features; // 로컬 서버 버전
-        const features = response.features;
-        
-        // 경로의 시작점과 끝점 좌표를 저장할 변수
-        let startPoint, endPoint;
-        
-        // 경로 데이터 처리
-        for (let i = 0; i < features.length; i++) {
-          const feature = features[i];
+
+        // LineString 타입의 요소만 처리 (실제 경로 라인)
+        if (feature.geometry.type === "LineString") {
+          const coordinates = feature.geometry.coordinates;
+          const latLngArr = coordinates.map(coord => 
+            new Tmapv3.LatLng(coord[1], coord[0])
+          );
+
+          console.log(i + " 구간 좌표:", latLngArr);
           
-          /* if (feature.geometry.type === "LineString"){
-            const coordinates = feature.geometry.coordinates;
-            coordinates.forEach(coord => {
-              console.log(i + " 구간 좌표:", coord[0], coord[1]);
-            });
-          } */
-
-
-          // LineString 타입의 요소만 처리 (실제 경로 라인)
-          if (feature.geometry.type === "LineString") {
-            const coordinates = feature.geometry.coordinates;
-            const latLngArr = coordinates.map(coord => 
-              new Tmapv3.LatLng(coord[1], coord[0])
-            );
-
-            console.log(i + " 구간 좌표:", latLngArr);
-            
-            // 경로 라인 생성
-            const polyline = new Tmapv3.Polyline({
-              path: latLngArr, // 경로 좌표 배열: [LatLng, LatLng, ...]
-              strokeColor: "#5760E5",
-              strokeWeight: 5,
-              strokeOpacity: 1,
-              map: this.map
-            });
-            
-            this.routeLines.push(polyline);
-          } 
-          // Point 타입의 요소 처리 (시작점, 경유지, 회전지점)
-          else if (feature.geometry.type === "Point") {
-            const coord = feature.geometry.coordinates;
-            const latLng = new Tmapv3.LatLng(coord[1], coord[0]);
-            
-            // 포인트 타입에 따라 마커 설정
-            let markerType;
-            if (feature.properties.pointType === "SP") {
-              // 시작점
-              markerType = "start";
-              startPoint = latLng;
-            } else if (feature.properties.pointType === "EP") {
-              // 도착점
-              markerType = "end";
-              endPoint = latLng;
-            } else if (feature.properties.pointType === "GP") {
-              // 회전지점
-              // markerType = "waypoint";
-              continue;
-            } else {
-              continue; // 다른 포인트 타입은 처리하지 않음
-            }
-            
-            // 마커 이미지 설정
-            let markerImg, markerSize;
-            if (markerType === "start") {
-              // markerImg = "../assets/images/start.png";
-              markerImg = startImg;
-              markerSize = new Tmapv3.Size(28, 28);
-            } else if (markerType === "end") {
-              //markerImg = "../assets/images/end.png";
-              markerImg = endImg;
-              markerSize = new Tmapv3.Size(28, 28);
-            } else {
-              // 경유지는 작은 원형 마커로 표시
-              // markerImg = "http://tmapapi.sktelecom.com/upload/tmap/marker/pin_b_m_p.png";
-              // markerSize = new Tmapv3.Size(12, 12);
-            }
-            
-            // 마커 생성
-            const marker = new Tmapv3.Marker({
-              position: latLng,
-              icon: new URL(markerImg, import.meta.url).href,
-              iconSize: markerSize,
-              title: feature.properties.name,
-              map: this.map
-            });
-            
-            this.markerPoints.push(marker);
+          // 경로 라인 생성
+          const polyline = new Tmapv3.Polyline({
+            path: latLngArr, // 경로 좌표 배열: [LatLng, LatLng, ...]
+            strokeColor: "#5760E5",
+            strokeWeight: 5,
+            strokeOpacity: 1,
+            map: this.map
+          });
+          
+          this.routeLines.push(polyline);
+        } 
+        // Point 타입의 요소 처리 (시작점, 경유지, 회전지점)
+        else if (feature.geometry.type === "Point") {
+          const coord = feature.geometry.coordinates;
+          const latLng = new Tmapv3.LatLng(coord[1], coord[0]);
+          
+          // 포인트 타입에 따라 마커 설정
+          let markerType;
+          if (feature.properties.pointType === "SP") {
+            // 시작점
+            markerType = "start";
+            startPoint = latLng;
+          } else if (feature.properties.pointType === "EP") {
+            // 도착점
+            markerType = "end";
+            endPoint = latLng;
+          } else if (feature.properties.pointType === "GP") {
+            // 회전지점
+            // markerType = "waypoint";
+            continue;
+          } else {
+            continue; // 다른 포인트 타입은 처리하지 않음
           }
+          
+          // 마커 이미지 설정
+          let markerImg, markerSize;
+          if (markerType === "start") {
+            // markerImg = "../assets/images/start.png";
+            markerImg = startImg;
+            markerSize = new Tmapv3.Size(28, 28);
+          } else if (markerType === "end") {
+            //markerImg = "../assets/images/end.png";
+            markerImg = endImg;
+            markerSize = new Tmapv3.Size(28, 28);
+          } else {
+            // 경유지는 작은 원형 마커로 표시
+            // markerImg = "http://tmapapi.sktelecom.com/upload/tmap/marker/pin_b_m_p.png";
+            // markerSize = new Tmapv3.Size(12, 12);
+          }
+          
+          // 마커 생성
+          const marker = new Tmapv3.Marker({
+            position: latLng,
+            icon: new URL(markerImg, import.meta.url).href,
+            iconSize: markerSize,
+            title: feature.properties.name,
+            map: this.map
+          });
+          
+          this.markerPoints.push(marker);
         }
+      }
 
         // 시작점과 끝점으로 bounds 설정
         if (startPoint && endPoint) {
@@ -955,13 +963,27 @@ export default {
       this.stopSimulation();
 
       try {
-        // 경로 객체 삭제
+        // 경로 객체 삭제 - 객체와 배열이 존재하는지 확인 후 처리
         if (this.routeLines && this.routeLines.length > 0) {
-          this.routeLines.forEach(line => line.setMap(null));
+          this.routeLines.forEach(line => {
+            // 라인이 유효한지, 그리고 setMap 메서드가 있는지 확인
+            if (line && typeof line.setMap === 'function') {
+              line.setMap(null);
+            }
+          });
         }
         if (this.markerPoints && this.markerPoints.length > 0) {
-          this.markerPoints.forEach(marker => marker.setMap(null));
+          this.markerPoints.forEach(marker => {
+            // 마커가 유효한지, 그리고 setMap 메서드가 있는지 확인
+            if (marker && typeof marker.setMap === 'function') {
+              marker.setMap(null);
+            }
+          });
         }
+        
+        // 배열 초기화
+        this.routeLines = [];
+        this.markerPoints = [];
       }
       catch (error) {
         console.error("경로 종료 오류", error);
